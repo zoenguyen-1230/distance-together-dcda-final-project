@@ -11,8 +11,9 @@ import { Connection, ConnectionFilter, CurrentUserProfile, SocialPlatform } from
 import { palette } from "../../theme/palette";
 
 const filters: ConnectionFilter[] = ["all", "partner", "friend", "family"];
+const seanProfileImage = require("../../assets/sean-profile.jpg");
 const profileImages: Record<string, any> = {
-  "conn-1": require("../../assets/sean-profile.jpg"),
+  "conn-1": seanProfileImage,
 };
 const socialVisuals: Record<
   SocialPlatform,

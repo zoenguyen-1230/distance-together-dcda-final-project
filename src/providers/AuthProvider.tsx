@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isActive = false;
       data.subscription.unsubscribe();
     };
-  }, []);
+  }, [previewMode]);
 
   const signIn = async (email: string, password: string): Promise<AuthResult> => {
     if (!hasSupabaseCredentials) {
