@@ -4,6 +4,7 @@ import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { dateIdeas, smartCallWindows } from "../../data/mockData";
+import { useAuth } from "../../providers/AuthProvider";
 import { palette } from "../../theme/palette";
 
 const alternateWindowsByPerson: Record<string, string[]> = {
@@ -23,10 +24,12 @@ const alternateWindowsByPerson: Record<string, string[]> = {
 };
 
 export function PlansScreen() {
+  const { isDemoMode } = useAuth();
+  const liveCallWindows = isDemoMode ? smartCallWindows : [];
   const [selectedDateIdea, setSelectedDateIdea] = useState(dateIdeas[0]);
   const [dateIdeaRolls, setDateIdeaRolls] = useState(1);
   const [savedDateIdeas, setSavedDateIdeas] = useState<string[]>([]);
-  const [selectedPerson, setSelectedPerson] = useState("Sean");
+  const [selectedPerson, setSelectedPerson] = useState(liveCallWindows[0]?.person ?? "");
   const [selectedEnergy, setSelectedEnergy] = useState<"all" | "low" | "steady" | "high">(
     "steady"
   );
@@ -35,12 +38,12 @@ export function PlansScreen() {
 
   const filteredCallWindows = useMemo(
     () =>
-      smartCallWindows.filter(
+      liveCallWindows.filter(
         (slot) =>
           slot.person === selectedPerson &&
           (selectedEnergy === "all" || slot.energyFit === selectedEnergy)
       ),
-    [selectedEnergy, selectedPerson]
+    [liveCallWindows, selectedEnergy, selectedPerson]
   );
 
   const alternateWindows = alternateWindowsByPerson[selectedPerson] ?? [];
@@ -142,7 +145,7 @@ export function PlansScreen() {
         <View style={styles.controlGroup}>
           <Text style={styles.controlLabel}>Who are you planning for?</Text>
           <View style={styles.chipWrap}>
-            {["Sean", "Trang", "Hien"].map((person) => (
+            {[...new Set(liveCallWindows.map((slot) => slot.person))].map((person) => (
               <FilterChip
                 key={person}
                 label={person}
@@ -153,21 +156,29 @@ export function PlansScreen() {
           </View>
         </View>
 
-        <View style={styles.controlGroup}>
-          <Text style={styles.controlLabel}>What energy level fits best?</Text>
-          <View style={styles.chipWrap}>
-            {["all", "low", "steady", "high"].map((energy) => (
-              <FilterChip
-                key={energy}
-                label={energy}
-                active={selectedEnergy === energy}
-                onPress={() =>
-                  setSelectedEnergy(energy as "all" | "low" | "steady" | "high")
-                }
-              />
-            ))}
+        {liveCallWindows.length ? (
+          <View style={styles.controlGroup}>
+            <Text style={styles.controlLabel}>What energy level fits best?</Text>
+            <View style={styles.chipWrap}>
+              {["all", "low", "steady", "high"].map((energy) => (
+                <FilterChip
+                  key={energy}
+                  label={energy}
+                  active={selectedEnergy === energy}
+                  onPress={() =>
+                    setSelectedEnergy(energy as "all" | "low" | "steady" | "high")
+                  }
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.feedMeta}>
+              Smart call scheduling starts blank for new accounts. Add your people first, then this section can suggest shared windows.
+            </Text>
+          </View>
+        )}
 
         {filteredCallWindows.map((slot) => (
           <View key={slot.id} style={styles.callCard}>
@@ -217,7 +228,7 @@ export function PlansScreen() {
           </View>
         ))}
 
-        {!filteredCallWindows.length ? (
+        {!filteredCallWindows.length && liveCallWindows.length ? (
           <View style={styles.emptyState}>
             <Text style={styles.feedMeta}>
               No perfect match yet for that energy level. Try a different energy filter

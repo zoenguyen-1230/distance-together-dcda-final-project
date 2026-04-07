@@ -5,7 +5,9 @@ import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { locationDirectory } from "../../data/locationDirectory";
-import { Connection, ConnectionFilter, SocialPlatform } from "../../types";
+import { useAuth } from "../../providers/AuthProvider";
+import { useProfile } from "../../providers/ProfileProvider";
+import { Connection, ConnectionFilter, CurrentUserProfile, SocialPlatform } from "../../types";
 import { palette } from "../../theme/palette";
 
 const filters: ConnectionFilter[] = ["all", "partner", "friend", "family"];
@@ -24,12 +26,28 @@ const socialVisuals: Record<
   BeReal: { glyph: "Be", background: "#FFF3D9", color: "#111111" },
 };
 export function ConnectionsScreen() {
-  const [connections, setConnections] = useState<Connection[]>(seedConnections);
-  const [selectedFilter, setSelectedFilter] = useState<ConnectionFilter>("partner");
-  const [selectedSocials, setSelectedSocials] = useState<SocialPlatform[]>([
-    "Instagram",
-    "Spotify",
-  ]);
+  const { isDemoMode } = useAuth();
+  const { profile, saveProfile } = useProfile();
+  const [connections, setConnections] = useState<Connection[]>(
+    isDemoMode ? seedConnections : []
+  );
+  const [selectedFilter, setSelectedFilter] = useState<ConnectionFilter>(
+    isDemoMode ? "partner" : "all"
+  );
+  const [selectedSocials, setSelectedSocials] = useState<SocialPlatform[]>(
+    isDemoMode ? ["Instagram", "Spotify"] : []
+  );
+  const [profileEditorVisible, setProfileEditorVisible] = useState(false);
+  const [profileDraftName, setProfileDraftName] = useState(profile.displayName);
+  const [profileDraftLocation, setProfileDraftLocation] = useState(profile.location);
+  const [profileDraftTimezone, setProfileDraftTimezone] = useState(profile.timezone);
+  const [profileDraftRelationshipFocus, setProfileDraftRelationshipFocus] = useState(
+    profile.relationshipFocus
+  );
+  const [profileDraftNote, setProfileDraftNote] = useState(profile.note);
+  const [profileDraftLinkedSocials, setProfileDraftLinkedSocials] = useState<
+    SocialPlatform[]
+  >(profile.linkedSocials);
   const [selectedPersonId, setSelectedPersonId] = useState<string>("");
   const [editorVisible, setEditorVisible] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -48,8 +66,19 @@ export function ConnectionsScreen() {
           ? true
           : connection.relationshipType === selectedFilter
       ),
-    [selectedFilter]
+    [connections, selectedFilter]
   );
+  const profileLocationSuggestions = useMemo(() => {
+    const query = profileDraftLocation.trim().toLowerCase();
+
+    if (!query) {
+      return [];
+    }
+
+    return locationDirectory
+      .filter((location) => location.label.toLowerCase().includes(query))
+      .slice(0, 5);
+  }, [profileDraftLocation]);
 
   const locationSuggestions = useMemo(() => {
     const query = draftLocation.trim().toLowerCase();
@@ -62,6 +91,25 @@ export function ConnectionsScreen() {
       .filter((location) => location.label.toLowerCase().includes(query))
       .slice(0, 5);
   }, [draftLocation]);
+
+  useEffect(() => {
+    setProfileDraftName(profile.displayName);
+    setProfileDraftLocation(profile.location);
+    setProfileDraftTimezone(profile.timezone);
+    setProfileDraftRelationshipFocus(profile.relationshipFocus);
+    setProfileDraftNote(profile.note);
+    setProfileDraftLinkedSocials(profile.linkedSocials);
+  }, [profile]);
+
+  useEffect(() => {
+    const exactMatch = locationDirectory.find(
+      (location) => location.label.toLowerCase() === profileDraftLocation.trim().toLowerCase()
+    );
+
+    if (exactMatch) {
+      setProfileDraftTimezone(exactMatch.timezone);
+    }
+  }, [profileDraftLocation]);
 
   useEffect(() => {
     const exactMatch = locationDirectory.find(
@@ -168,8 +216,169 @@ export function ConnectionsScreen() {
     setEditorVisible(false);
   };
 
+  const applyProfileLocationSuggestion = (locationLabel: string) => {
+    const match = locationDirectory.find((location) => location.label === locationLabel);
+
+    setProfileDraftLocation(locationLabel);
+    if (match) {
+      setProfileDraftTimezone(match.timezone);
+    }
+  };
+
+  const toggleProfileSocial = (platform: SocialPlatform) => {
+    setProfileDraftLinkedSocials((current) =>
+      current.includes(platform)
+        ? current.filter((item) => item !== platform)
+        : [...current, platform]
+    );
+  };
+
+  const saveCurrentProfile = () => {
+    if (!profileDraftName.trim()) {
+      return;
+    }
+
+    const nextProfile: CurrentUserProfile = {
+      displayName: profileDraftName.trim(),
+      location: profileDraftLocation.trim(),
+      timezone: profileDraftTimezone.trim(),
+      relationshipFocus: profileDraftRelationshipFocus.trim(),
+      note: profileDraftNote.trim(),
+      linkedSocials: profileDraftLinkedSocials,
+    };
+
+    void saveProfile(nextProfile);
+    setProfileEditorVisible(false);
+  };
+
   return (
     <ScreenSurface>
+      <SectionCard
+        title="Your profile"
+        subtitle="Personalize your side of the app so the experience reflects your own long-distance world"
+      >
+        <View style={styles.profileCard}>
+          <View style={[styles.photoPanel, { backgroundColor: palette.softSun }]}>
+            <Text style={styles.avatarInitial}>
+              {(profile.displayName || "Y").charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.profileCopy}>
+            <Text style={styles.profileName}>{profile.displayName}</Text>
+            <Text style={styles.profileMeta}>
+              {profile.location || "Add your home base"}
+              {profile.timezone ? ` | ${profile.timezone}` : ""}
+            </Text>
+            <Text style={styles.profileNote}>
+              {profile.relationshipFocus || "Add your relationship focus"}
+            </Text>
+            <Text style={styles.accountStatus}>
+              {profile.note || "Describe how you want to use the space with your people."}
+            </Text>
+            <View style={styles.profileSocialRow}>
+              {profile.linkedSocials.map((platform) => {
+                const visual = socialVisuals[platform];
+
+                return (
+                  <View
+                    key={`current-profile-${platform}`}
+                    style={[
+                      styles.inlineSocialBadge,
+                      { backgroundColor: visual.background },
+                    ]}
+                  >
+                    <Text style={[styles.inlineSocialGlyph, { color: visual.color }]}>
+                      {visual.glyph}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            <TouchableOpacity onPress={() => setProfileEditorVisible(true)}>
+              <Text style={styles.editLink}>Edit your profile</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {profileEditorVisible ? (
+          <View style={styles.editorCard}>
+            <View style={styles.editorHeader}>
+              <Text style={styles.feedTitle}>Set up your profile</Text>
+              <TouchableOpacity onPress={() => setProfileEditorVisible(false)}>
+                <Text style={styles.editLink}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.inputStack}>
+              <TextInput
+                value={profileDraftName}
+                onChangeText={setProfileDraftName}
+                placeholder="Your name"
+                placeholderTextColor="#A08F89"
+                style={styles.textInput}
+              />
+              <TextInput
+                value={profileDraftLocation}
+                onChangeText={setProfileDraftLocation}
+                placeholder="Your location"
+                placeholderTextColor="#A08F89"
+                style={styles.textInput}
+              />
+              {profileLocationSuggestions.length ? (
+                <View style={styles.suggestionList}>
+                  {profileLocationSuggestions.map((location) => (
+                    <TouchableOpacity
+                      key={`profile-${location.label}`}
+                      style={styles.suggestionRow}
+                      onPress={() => applyProfileLocationSuggestion(location.label)}
+                    >
+                      <Text style={styles.suggestionTitle}>{location.label}</Text>
+                      <Text style={styles.suggestionMeta}>{location.timezone}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+              <TextInput
+                value={profileDraftTimezone}
+                onChangeText={setProfileDraftTimezone}
+                placeholder="Timezone, ex: CT"
+                placeholderTextColor="#A08F89"
+                style={styles.textInput}
+              />
+              <TextInput
+                value={profileDraftRelationshipFocus}
+                onChangeText={setProfileDraftRelationshipFocus}
+                placeholder="Relationship focus, ex: Partner in SF + family in Hanoi"
+                placeholderTextColor="#A08F89"
+                style={[styles.textInput, styles.detailInput]}
+                multiline
+              />
+              <TextInput
+                value={profileDraftNote}
+                onChangeText={setProfileDraftNote}
+                placeholder="A note about how you want to use the app"
+                placeholderTextColor="#A08F89"
+                style={[styles.textInput, styles.detailInput]}
+                multiline
+              />
+              <Text style={styles.accountLabel}>Linked socials</Text>
+              <View style={styles.chipWrap}>
+                {socialPlatforms.map((platform) => (
+                  <FilterChip
+                    key={`profile-${platform}`}
+                    label={platform}
+                    active={profileDraftLinkedSocials.includes(platform)}
+                    onPress={() => toggleProfileSocial(platform)}
+                  />
+                ))}
+              </View>
+            </View>
+            <TouchableOpacity style={styles.primaryButton} onPress={saveCurrentProfile}>
+              <Text style={styles.primaryButtonText}>Save your profile</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+      </SectionCard>
+
       <SectionCard
         title="Your people"
         subtitle="Invite partners, close friends, siblings, parents, or anyone you want to stay meaningfully connected to"
@@ -240,6 +449,17 @@ export function ConnectionsScreen() {
             </View>
           </View>
         ))}
+
+        {!filteredConnections.length ? (
+          <View style={styles.feedCard}>
+            <View style={styles.feedCopy}>
+              <Text style={styles.feedTitle}>No people added yet</Text>
+              <Text style={styles.feedMeta}>
+                Start blank and build your own circle. Add your first partner, friend, or family member below.
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.secondaryButton} onPress={startNewConnection}>
@@ -361,32 +581,43 @@ export function ConnectionsScreen() {
           ))}
         </View>
 
-        {selectedSocials.map((platform) => (
-          <View key={platform} style={styles.feedCard}>
-            <View
-              style={[
-                styles.socialBadge,
-                { backgroundColor: socialVisuals[platform].background },
-              ]}
-            >
-              <Text
+        {selectedSocials.length ? (
+          selectedSocials.map((platform) => (
+            <View key={platform} style={styles.feedCard}>
+              <View
                 style={[
-                  styles.socialBadgeText,
-                  { color: socialVisuals[platform].color },
+                  styles.socialBadge,
+                  { backgroundColor: socialVisuals[platform].background },
                 ]}
               >
-                {socialVisuals[platform].glyph}
-              </Text>
+                <Text
+                  style={[
+                    styles.socialBadgeText,
+                    { color: socialVisuals[platform].color },
+                  ]}
+                >
+                  {socialVisuals[platform].glyph}
+                </Text>
+              </View>
+              <View style={styles.feedCopy}>
+                <Text style={styles.feedTitle}>{platform} profile linked</Text>
+                <Text style={styles.feedMeta}>
+                  Sync handles, recent context, and shared identity cues so the app stays up to
+                  date with the accounts you both already use.
+                </Text>
+              </View>
             </View>
+          ))
+        ) : (
+          <View style={styles.feedCard}>
             <View style={styles.feedCopy}>
-              <Text style={styles.feedTitle}>{platform} profile linked</Text>
+              <Text style={styles.feedTitle}>No socials linked yet</Text>
               <Text style={styles.feedMeta}>
-                Sync handles, recent context, and shared identity cues so the app stays up to
-                date with the accounts you both already use.
+                Pick the platforms you want to connect when you are ready to personalize your account.
               </Text>
             </View>
           </View>
-        ))}
+        )}
       </SectionCard>
     </ScreenSurface>
   );

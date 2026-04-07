@@ -7,7 +7,7 @@ import {
   budgetSuggestions,
   cityWeatherForecasts,
   cheapFlightWindows,
-  connections,
+  connections as seedConnections,
   nextVisitItinerary,
   packingChecklist,
   sharedBudgetSeed,
@@ -16,6 +16,7 @@ import {
   upcomingVisits,
 } from "../../data/mockData";
 import { locationDirectory } from "../../data/locationDirectory";
+import { useAuth } from "../../providers/AuthProvider";
 import { BudgetItem, FlightTrackerEntry, FlightWindow, VisitPlan } from "../../types";
 import { palette } from "../../theme/palette";
 
@@ -299,35 +300,43 @@ function CalendarRangePicker({
 }
 
 export function TripsScreen() {
-  const [trips, setTrips] = useState<VisitPlan[]>(upcomingVisits);
-  const [selectedTripId, setSelectedTripId] = useState(upcomingVisits[0]?.id ?? "");
-  const [tripDraftTitle, setTripDraftTitle] = useState(upcomingVisits[0]?.title ?? "");
-  const [tripDraftLocation, setTripDraftLocation] = useState(upcomingVisits[0]?.location ?? "");
+  const { isDemoMode } = useAuth();
+  const liveConnections = isDemoMode ? seedConnections : [];
+  const initialTrips = isDemoMode ? upcomingVisits : [];
+  const initialFlightWindows = isDemoMode ? cheapFlightWindows : [];
+  const initialTrackedFlights = isDemoMode ? trackedFlights : [];
+  const initialItinerary = isDemoMode ? nextVisitItinerary : [];
+  const initialPackingChecklist = isDemoMode ? packingChecklist : [];
+  const initialBudget = isDemoMode ? sharedBudgetSeed : [];
+  const [trips, setTrips] = useState<VisitPlan[]>(initialTrips);
+  const [selectedTripId, setSelectedTripId] = useState(initialTrips[0]?.id ?? "");
+  const [tripDraftTitle, setTripDraftTitle] = useState(initialTrips[0]?.title ?? "");
+  const [tripDraftLocation, setTripDraftLocation] = useState(initialTrips[0]?.location ?? "");
   const [tripDraftStartDate, setTripDraftStartDate] = useState(
-    upcomingVisits[0]?.startDate ?? ""
+    initialTrips[0]?.startDate ?? ""
   );
   const [tripDraftEndDate, setTripDraftEndDate] = useState(
-    upcomingVisits[0]?.endDate ?? ""
+    initialTrips[0]?.endDate ?? ""
   );
-  const [tripDraftPlan, setTripDraftPlan] = useState(upcomingVisits[0]?.plan ?? "");
+  const [tripDraftPlan, setTripDraftPlan] = useState(initialTrips[0]?.plan ?? "");
   const [tripDraftParticipantIds, setTripDraftParticipantIds] = useState<string[]>(
-    upcomingVisits[0]?.participantIds ?? []
+    initialTrips[0]?.participantIds ?? []
   );
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const initialDate = parseDateValue(upcomingVisits[0]?.startDate ?? "");
+    const initialDate = parseDateValue(initialTrips[0]?.startDate ?? "");
 
     return initialDate
       ? new Date(initialDate.getFullYear(), initialDate.getMonth(), 1, 12, 0, 0)
       : new Date();
   });
   const [selectedFlightTrip, setSelectedFlightTrip] = useState(
-    upcomingVisits[0]?.location ?? ""
+    initialTrips[0]?.location ?? ""
   );
-  const [flightWindows, setFlightWindows] = useState<FlightWindow[]>(cheapFlightWindows);
+  const [flightWindows, setFlightWindows] = useState<FlightWindow[]>(initialFlightWindows);
   const [draftFlightStartDate, setDraftFlightStartDate] = useState("");
   const [draftFlightEndDate, setDraftFlightEndDate] = useState("");
   const [flightCalendarMonth, setFlightCalendarMonth] = useState(() => {
-    const initialDate = parseDateValue(upcomingVisits[0]?.startDate ?? "");
+    const initialDate = parseDateValue(initialTrips[0]?.startDate ?? "");
 
     return initialDate
       ? new Date(initialDate.getFullYear(), initialDate.getMonth(), 1, 12, 0, 0)
@@ -336,19 +345,19 @@ export function TripsScreen() {
   const [draftFlightPrice, setDraftFlightPrice] = useState("");
   const [draftFlightNote, setDraftFlightNote] = useState("");
   const [selectedTrackedFlightTrip, setSelectedTrackedFlightTrip] = useState(
-    upcomingVisits[0]?.location ?? ""
+    initialTrips[0]?.location ?? ""
   );
   const [trackedFlightEntries, setTrackedFlightEntries] =
-    useState<FlightTrackerEntry[]>(trackedFlights);
+    useState<FlightTrackerEntry[]>(initialTrackedFlights);
   const [draftTrackedFlightConnectionId, setDraftTrackedFlightConnectionId] = useState(
-    connections[0]?.id ?? ""
+    liveConnections[0]?.id ?? ""
   );
   const [draftTrackedFlightDirection, setDraftTrackedFlightDirection] = useState<
     "arrival" | "departure"
   >("arrival");
   const [draftTrackedFlightDate, setDraftTrackedFlightDate] = useState("");
   const [trackerCalendarMonth, setTrackerCalendarMonth] = useState(() => {
-    const initialDate = parseDateValue(upcomingVisits[0]?.startDate ?? "");
+    const initialDate = parseDateValue(initialTrips[0]?.startDate ?? "");
 
     return initialDate
       ? new Date(initialDate.getFullYear(), initialDate.getMonth(), 1, 12, 0, 0)
@@ -358,24 +367,24 @@ export function TripsScreen() {
   const [draftTrackedFlightRouteNote, setDraftTrackedFlightRouteNote] = useState("");
   const [openTrackedFlightPersonMenu, setOpenTrackedFlightPersonMenu] = useState(false);
   const [openTrackedFlightDirectionMenu, setOpenTrackedFlightDirectionMenu] = useState(false);
-  const [selectedVisitTitle, setSelectedVisitTitle] = useState(upcomingVisits[0]?.title ?? "");
-  const [itineraryItems, setItineraryItems] = useState(nextVisitItinerary);
+  const [selectedVisitTitle, setSelectedVisitTitle] = useState(initialTrips[0]?.title ?? "");
+  const [itineraryItems, setItineraryItems] = useState(initialItinerary);
   const [completedItinerary, setCompletedItinerary] = useState<string[]>([
-    nextVisitItinerary[0]?.id ?? "",
+    initialItinerary[0]?.id ?? "",
   ]);
   const [draftTime, setDraftTime] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
   const [draftDetail, setDraftDetail] = useState("");
   const [selectedPackingTrip, setSelectedPackingTrip] = useState(
-    upcomingVisits[0]?.location ?? ""
+    initialTrips[0]?.location ?? "Any trip"
   );
-  const [packingItems, setPackingItems] = useState(packingChecklist);
+  const [packingItems, setPackingItems] = useState(initialPackingChecklist);
   const [packedItems, setPackedItems] = useState<string[]>([]);
   const [draftPackingLabel, setDraftPackingLabel] = useState("");
   const [selectedBudgetTrip, setSelectedBudgetTrip] = useState(
-    upcomingVisits[0]?.location ?? ""
+    initialTrips[0]?.location ?? ""
   );
-  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>(sharedBudgetSeed);
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>(initialBudget);
   const [draftBudgetLabel, setDraftBudgetLabel] = useState("");
   const [draftBudgetCategory, setDraftBudgetCategory] = useState("");
   const [draftBudgetPayer, setDraftBudgetPayer] = useState("");
@@ -480,7 +489,7 @@ export function TripsScreen() {
 
   const isBudgetClosed = closedBudgetTrips.includes(selectedBudgetTrip);
   const trackedFlightPersonName =
-    connections.find((connection) => connection.id === draftTrackedFlightConnectionId)?.name ??
+    liveConnections.find((connection) => connection.id === draftTrackedFlightConnectionId)?.name ??
     "Choose person";
 
   const toggleItinerary = (id: string) => {
@@ -812,7 +821,7 @@ export function TripsScreen() {
   };
 
   const getParticipantNames = (participantIds: string[]) =>
-    connections
+    liveConnections
       .filter((connection) => participantIds.includes(connection.id))
       .map((connection) => connection.name);
 
@@ -883,7 +892,7 @@ export function TripsScreen() {
   };
 
   const getConnectionName = (connectionId: string) =>
-    connections.find((connection) => connection.id === connectionId)?.name ?? "Your person";
+    liveConnections.find((connection) => connection.id === connectionId)?.name ?? "Your person";
 
   return (
     <ScreenSurface>
@@ -953,16 +962,24 @@ export function TripsScreen() {
             <TextInput value={tripDraftPlan} onChangeText={setTripDraftPlan} placeholder="Description or shared checklist" placeholderTextColor="#A08F89" style={[styles.textInput, styles.detailInput]} multiline />
             <View style={styles.controlGroup}>
               <Text style={styles.controlLabel}>Who is this trip with?</Text>
-              <View style={styles.chipWrap}>
-                {connections.map((connection) => (
-                  <FilterChip
-                    key={`trip-person-${connection.id}`}
-                    label={connection.name}
-                    active={tripDraftParticipantIds.includes(connection.id)}
-                    onPress={() => toggleTripParticipant(connection.id)}
-                  />
-                ))}
-              </View>
+              {liveConnections.length ? (
+                <View style={styles.chipWrap}>
+                  {liveConnections.map((connection) => (
+                    <FilterChip
+                      key={`trip-person-${connection.id}`}
+                      label={connection.name}
+                      active={tripDraftParticipantIds.includes(connection.id)}
+                      onPress={() => toggleTripParticipant(connection.id)}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.feedMeta}>
+                    Add people in `People` first, then link this trip to whoever is joining you.
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
           <View style={styles.rowMeta}>
@@ -979,76 +996,96 @@ export function TripsScreen() {
       </SectionCard>
 
       <SectionCard title="Next visit countdown" subtitle="Make time together feel tangible">
-        {trips.map((visit) => (
-          <View key={visit.id} style={styles.visitCard}>
-            <View style={styles.visitBadge}>
-              <Text style={styles.visitNumber}>{visit.daysAway}</Text>
-              <Text style={styles.visitBadgeLabel}>days</Text>
+        {trips.length ? (
+          trips.map((visit) => (
+            <View key={visit.id} style={styles.visitCard}>
+              <View style={styles.visitBadge}>
+                <Text style={styles.visitNumber}>{visit.daysAway}</Text>
+                <Text style={styles.visitBadgeLabel}>days</Text>
+              </View>
+              <View style={styles.visitCopy}>
+                <Text style={styles.feedTitle}>{visit.title}</Text>
+                <Text style={styles.feedMeta}>{visit.date} | {visit.location}</Text>
+                <Text style={styles.helperMeta}>
+                  With {getParticipantNames(visit.participantIds).join(", ") || "your people"}
+                </Text>
+                <Text style={styles.feedMeta}>{visit.plan}</Text>
+              </View>
             </View>
-            <View style={styles.visitCopy}>
-              <Text style={styles.feedTitle}>{visit.title}</Text>
-              <Text style={styles.feedMeta}>{visit.date} | {visit.location}</Text>
-              <Text style={styles.helperMeta}>
-                With {getParticipantNames(visit.participantIds).join(", ") || "your people"}
-              </Text>
-              <Text style={styles.feedMeta}>{visit.plan}</Text>
-            </View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.feedTitle}>No trips yet</Text>
+            <Text style={styles.feedMeta}>
+              Start with the trip editor above and your countdowns will show up here.
+            </Text>
           </View>
-        ))}
+        )}
       </SectionCard>
 
       <SectionCard title="Visit itinerary" subtitle="Plan the next trip together so time feels intentional before you even arrive">
-        <View style={styles.controlGroup}>
-          <Text style={styles.controlLabel}>Which visit are you planning?</Text>
-          <View style={styles.chipWrap}>
-            {trips.map((visit) => (
-              <FilterChip
-                key={visit.id}
-                label={visit.location}
-                active={selectedVisitTitle === visit.title}
-                onPress={() => setSelectedVisitTitle(visit.title)}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.editorCard}>
-          <Text style={styles.subsectionTitle}>Add an itinerary item</Text>
-          <View style={styles.inputStack}>
-            <TextInput value={draftTime} onChangeText={setDraftTime} placeholder="Time block, ex: Sat night" placeholderTextColor="#A08F89" style={styles.textInput} />
-            <TextInput value={draftTitle} onChangeText={setDraftTitle} placeholder="Title, ex: Botanical Garden date" placeholderTextColor="#A08F89" style={styles.textInput} />
-            <TextInput value={draftDetail} onChangeText={setDraftDetail} placeholder="Details, ex: bring camera + stop for coffee after" placeholderTextColor="#A08F89" style={[styles.textInput, styles.detailInput]} multiline />
-          </View>
-          <TouchableOpacity style={styles.primaryButton} onPress={addItineraryItem}>
-            <Text style={styles.primaryButtonText}>Add to {selectedVisitTitle}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {visibleItinerary.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.toolCard} onPress={() => toggleItinerary(item.id)} activeOpacity={0.9}>
-            <View style={[styles.toolBadge, completedItinerary.includes(item.id) && styles.toolBadgeComplete]}>
-              <Text style={styles.toolBadgeLabel}>{item.time}</Text>
-            </View>
-            <View style={styles.toolCopy}>
-              <Text style={styles.feedTitle}>{item.title}</Text>
-              <Text style={styles.feedMeta}>{item.detail}</Text>
-              <View style={styles.rowMeta}>
-                <Text style={styles.helperMeta}>
-                  {completedItinerary.includes(item.id) ? "Marked as planned together" : "Tap to mark this part of the trip as planned"}
-                </Text>
-                <TouchableOpacity onPress={() => removeItineraryItem(item.id)}>
-                  <Text style={styles.removeText}>Remove</Text>
-                </TouchableOpacity>
+        {trips.length ? (
+          <>
+            <View style={styles.controlGroup}>
+              <Text style={styles.controlLabel}>Which visit are you planning?</Text>
+              <View style={styles.chipWrap}>
+                {trips.map((visit) => (
+                  <FilterChip
+                    key={visit.id}
+                    label={visit.location}
+                    active={selectedVisitTitle === visit.title}
+                    onPress={() => setSelectedVisitTitle(visit.title)}
+                  />
+                ))}
               </View>
             </View>
-          </TouchableOpacity>
-        ))}
 
-        {!visibleItinerary.length ? (
+            <View style={styles.editorCard}>
+              <Text style={styles.subsectionTitle}>Add an itinerary item</Text>
+              <View style={styles.inputStack}>
+                <TextInput value={draftTime} onChangeText={setDraftTime} placeholder="Time block, ex: Sat night" placeholderTextColor="#A08F89" style={styles.textInput} />
+                <TextInput value={draftTitle} onChangeText={setDraftTitle} placeholder="Title, ex: Botanical Garden date" placeholderTextColor="#A08F89" style={styles.textInput} />
+                <TextInput value={draftDetail} onChangeText={setDraftDetail} placeholder="Details, ex: bring camera + stop for coffee after" placeholderTextColor="#A08F89" style={[styles.textInput, styles.detailInput]} multiline />
+              </View>
+              <TouchableOpacity style={styles.primaryButton} onPress={addItineraryItem}>
+                <Text style={styles.primaryButtonText}>Add to {selectedVisitTitle}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {visibleItinerary.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.toolCard} onPress={() => toggleItinerary(item.id)} activeOpacity={0.9}>
+                <View style={[styles.toolBadge, completedItinerary.includes(item.id) && styles.toolBadgeComplete]}>
+                  <Text style={styles.toolBadgeLabel}>{item.time}</Text>
+                </View>
+                <View style={styles.toolCopy}>
+                  <Text style={styles.feedTitle}>{item.title}</Text>
+                  <Text style={styles.feedMeta}>{item.detail}</Text>
+                  <View style={styles.rowMeta}>
+                    <Text style={styles.helperMeta}>
+                      {completedItinerary.includes(item.id) ? "Marked as planned together" : "Tap to mark this part of the trip as planned"}
+                    </Text>
+                    <TouchableOpacity onPress={() => removeItineraryItem(item.id)}>
+                      <Text style={styles.removeText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            {!visibleItinerary.length ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.feedMeta}>No itinerary items yet for this trip. Add the first plan above so you can build it together.</Text>
+              </View>
+            ) : null}
+          </>
+        ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.feedMeta}>No itinerary items yet for this trip. Add the first plan above so you can build it together.</Text>
+            <Text style={styles.feedTitle}>No itinerary yet</Text>
+            <Text style={styles.feedMeta}>
+              Create your first trip before adding shared plans and stops.
+            </Text>
           </View>
-        ) : null}
+        )}
       </SectionCard>
 
       <SectionCard title="Trip toolkit" subtitle="Flights, weather, packing, and budgeting in one shared planning space">
@@ -1065,243 +1102,263 @@ export function TripsScreen() {
 
         <View style={styles.subsectionBlock}>
           <Text style={styles.subsectionTitle}>Cheap flight date windows</Text>
-          <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Choose a trip or city</Text>
-            <View style={styles.chipWrap}>
-              {trips.map((visit) => (
-                <FilterChip
-                  key={`flight-${visit.id}`}
-                  label={visit.location}
-                  active={selectedFlightTrip === visit.location}
-                  onPress={() => setSelectedFlightTrip(visit.location)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.editorCard}>
-            <Text style={styles.subsectionTitle}>Add a cheap-flight window</Text>
-            <View style={styles.inputStack}>
-              <CalendarRangePicker
-                title="Flexible dates"
-                summary={draftFlightDateSummary}
-                monthDate={flightCalendarMonth}
-                startDate={draftFlightStartDate}
-                endDate={draftFlightEndDate}
-                isOpen={openCalendarPicker === "flight"}
-                onToggle={() =>
-                  setOpenCalendarPicker((current) => (current === "flight" ? null : "flight"))
-                }
-                onShiftMonth={shiftFlightCalendarMonth}
-                onSelectDate={selectFlightWindowDate}
-                onClear={() => {
-                  setDraftFlightStartDate("");
-                  setDraftFlightEndDate("");
-                }}
-                helperText="Pick a start day, then an end day to compare a cheaper travel window."
-              />
-              <TextInput
-                value={draftFlightPrice}
-                onChangeText={setDraftFlightPrice}
-                placeholder="Estimated fare, ex: 214"
-                placeholderTextColor="#A08F89"
-                style={styles.textInput}
-                keyboardType="decimal-pad"
-              />
-              <TextInput
-                value={draftFlightNote}
-                onChangeText={setDraftFlightNote}
-                placeholder="Why this window is good"
-                placeholderTextColor="#A08F89"
-                style={[styles.textInput, styles.detailInput]}
-                multiline
-              />
-            </View>
-            <TouchableOpacity style={styles.primaryButton} onPress={addFlightWindow}>
-              <Text style={styles.primaryButtonText}>Add flight window</Text>
-            </TouchableOpacity>
-          </View>
-
-          {visibleFlightWindows.map((item) => (
-            <View key={item.id} style={styles.tripSummaryCard}>
-                <View style={styles.summaryHeader}>
-                  <View style={styles.summaryBadge}>
-                    <Text style={styles.summaryValue}>${item.price}</Text>
-                    <Text style={styles.summaryLabel}>est. fare</Text>
-                  </View>
-                  <View style={styles.toolCopy}>
-                    <Text style={styles.feedTitle}>
-                      {formatDateRange(item.startDate, item.endDate)}
-                    </Text>
-                    <Text style={styles.feedMeta}>{item.note}</Text>
-                  </View>
+          {trips.length ? (
+            <>
+              <View style={styles.controlGroup}>
+                <Text style={styles.controlLabel}>Choose a trip or city</Text>
+                <View style={styles.chipWrap}>
+                  {trips.map((visit) => (
+                    <FilterChip
+                      key={`flight-${visit.id}`}
+                      label={visit.location}
+                      active={selectedFlightTrip === visit.location}
+                      onPress={() => setSelectedFlightTrip(visit.location)}
+                    />
+                  ))}
                 </View>
-              <TouchableOpacity style={styles.removeButton} onPress={() => removeFlightWindow(item.id)}>
-                <Text style={styles.removeButtonText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+              </View>
 
-          {!visibleFlightWindows.length ? (
+              <View style={styles.editorCard}>
+                <Text style={styles.subsectionTitle}>Add a cheap-flight window</Text>
+                <View style={styles.inputStack}>
+                  <CalendarRangePicker
+                    title="Flexible dates"
+                    summary={draftFlightDateSummary}
+                    monthDate={flightCalendarMonth}
+                    startDate={draftFlightStartDate}
+                    endDate={draftFlightEndDate}
+                    isOpen={openCalendarPicker === "flight"}
+                    onToggle={() =>
+                      setOpenCalendarPicker((current) => (current === "flight" ? null : "flight"))
+                    }
+                    onShiftMonth={shiftFlightCalendarMonth}
+                    onSelectDate={selectFlightWindowDate}
+                    onClear={() => {
+                      setDraftFlightStartDate("");
+                      setDraftFlightEndDate("");
+                    }}
+                    helperText="Pick a start day, then an end day to compare a cheaper travel window."
+                  />
+                  <TextInput
+                    value={draftFlightPrice}
+                    onChangeText={setDraftFlightPrice}
+                    placeholder="Estimated fare, ex: 214"
+                    placeholderTextColor="#A08F89"
+                    style={styles.textInput}
+                    keyboardType="decimal-pad"
+                  />
+                  <TextInput
+                    value={draftFlightNote}
+                    onChangeText={setDraftFlightNote}
+                    placeholder="Why this window is good"
+                    placeholderTextColor="#A08F89"
+                    style={[styles.textInput, styles.detailInput]}
+                    multiline
+                  />
+                </View>
+                <TouchableOpacity style={styles.primaryButton} onPress={addFlightWindow}>
+                  <Text style={styles.primaryButtonText}>Add flight window</Text>
+                </TouchableOpacity>
+              </View>
+
+              {visibleFlightWindows.map((item) => (
+                <View key={item.id} style={styles.tripSummaryCard}>
+                    <View style={styles.summaryHeader}>
+                      <View style={styles.summaryBadge}>
+                        <Text style={styles.summaryValue}>${item.price}</Text>
+                        <Text style={styles.summaryLabel}>est. fare</Text>
+                      </View>
+                      <View style={styles.toolCopy}>
+                        <Text style={styles.feedTitle}>
+                          {formatDateRange(item.startDate, item.endDate)}
+                        </Text>
+                        <Text style={styles.feedMeta}>{item.note}</Text>
+                      </View>
+                    </View>
+                  <TouchableOpacity style={styles.removeButton} onPress={() => removeFlightWindow(item.id)}>
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {!visibleFlightWindows.length ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.feedMeta}>
+                    No flight windows yet for this trip. Add one above to compare cheaper date options.
+                  </Text>
+                </View>
+              ) : null}
+            </>
+          ) : (
             <View style={styles.emptyState}>
               <Text style={styles.feedMeta}>
-                No flight windows yet for this trip. Add one above to compare cheaper date options.
+                Add a trip first, then you can track cheaper flight windows for that city.
               </Text>
             </View>
-          ) : null}
+          )}
         </View>
 
         <View style={styles.subsectionBlock}>
           <Text style={styles.subsectionTitle}>Tracked arrivals and departures</Text>
-          <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Choose a trip or city</Text>
-            <View style={styles.chipWrap}>
-              {trips.map((visit) => (
-                <FilterChip
-                  key={`tracked-${visit.id}`}
-                  label={visit.location}
-                  active={selectedTrackedFlightTrip === visit.location}
-                  onPress={() => setSelectedTrackedFlightTrip(visit.location)}
-                />
+          {trips.length ? (
+            <>
+              <View style={styles.controlGroup}>
+                <Text style={styles.controlLabel}>Choose a trip or city</Text>
+                <View style={styles.chipWrap}>
+                  {trips.map((visit) => (
+                    <FilterChip
+                      key={`tracked-${visit.id}`}
+                      label={visit.location}
+                      active={selectedTrackedFlightTrip === visit.location}
+                      onPress={() => setSelectedTrackedFlightTrip(visit.location)}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.editorCard}>
+                <Text style={styles.subsectionTitle}>Add a coming-or-going flight</Text>
+                <View style={styles.inputStack}>
+                  <View style={styles.selectWrap}>
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() =>
+                        setOpenTrackedFlightPersonMenu((current) => !current)
+                      }
+                    >
+                      <Text style={styles.selectButtonText}>{trackedFlightPersonName}</Text>
+                      <Text style={styles.selectChevron}>
+                        {openTrackedFlightPersonMenu ? "▲" : "▼"}
+                      </Text>
+                    </TouchableOpacity>
+                    {openTrackedFlightPersonMenu ? (
+                      <View style={styles.optionList}>
+                        {liveConnections.map((connection) => (
+                          <TouchableOpacity
+                            key={`tracked-person-${connection.id}`}
+                            style={styles.optionRow}
+                            onPress={() => {
+                              setDraftTrackedFlightConnectionId(connection.id);
+                              setOpenTrackedFlightPersonMenu(false);
+                            }}
+                          >
+                            <Text style={styles.optionText}>{connection.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={styles.selectWrap}>
+                    <TouchableOpacity
+                      style={styles.selectButton}
+                      onPress={() =>
+                        setOpenTrackedFlightDirectionMenu((current) => !current)
+                      }
+                    >
+                      <Text style={styles.selectButtonText}>
+                        {draftTrackedFlightDirection === "arrival" ? "Arrival" : "Departure"}
+                      </Text>
+                      <Text style={styles.selectChevron}>
+                        {openTrackedFlightDirectionMenu ? "▲" : "▼"}
+                      </Text>
+                    </TouchableOpacity>
+                    {openTrackedFlightDirectionMenu ? (
+                      <View style={styles.optionList}>
+                        {["arrival", "departure"].map((direction) => (
+                          <TouchableOpacity
+                            key={`tracked-direction-${direction}`}
+                            style={styles.optionRow}
+                            onPress={() => {
+                              setDraftTrackedFlightDirection(direction as "arrival" | "departure");
+                              setOpenTrackedFlightDirectionMenu(false);
+                            }}
+                          >
+                            <Text style={styles.optionText}>
+                              {direction === "arrival" ? "Arrival" : "Departure"}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                  <CalendarRangePicker
+                    title="Flight day"
+                    summary={draftTrackedFlightDateSummary}
+                    monthDate={trackerCalendarMonth}
+                    startDate={draftTrackedFlightDate}
+                    isOpen={openCalendarPicker === "tracker"}
+                    onToggle={() =>
+                      setOpenCalendarPicker((current) => (current === "tracker" ? null : "tracker"))
+                    }
+                    onShiftMonth={shiftTrackerCalendarMonth}
+                    onSelectDate={selectTrackedFlightDate}
+                    onClear={() => setDraftTrackedFlightDate("")}
+                    helperText="Use one date to track when someone arrives or heads home."
+                  />
+                  <TextInput
+                    value={draftTrackedFlightCode}
+                    onChangeText={setDraftTrackedFlightCode}
+                    placeholder="Flight code, ex: AA 1472"
+                    placeholderTextColor="#A08F89"
+                    style={styles.textInput}
+                  />
+                  <TextInput
+                    value={draftTrackedFlightRouteNote}
+                    onChangeText={setDraftTrackedFlightRouteNote}
+                    placeholder="Arrival or departure note"
+                    placeholderTextColor="#A08F89"
+                    style={[styles.textInput, styles.detailInput]}
+                    multiline
+                  />
+                </View>
+                <TouchableOpacity style={styles.primaryButton} onPress={addTrackedFlight}>
+                  <Text style={styles.primaryButtonText}>Add tracked flight</Text>
+                </TouchableOpacity>
+              </View>
+
+              {visibleTrackedFlights.map((item) => (
+                <View key={item.id} style={styles.tripSummaryCard}>
+                  <View style={styles.summaryHeader}>
+                    <View style={styles.summaryBadge}>
+                      <Text style={styles.summaryValue}>
+                        {item.direction === "arrival" ? "IN" : "OUT"}
+                      </Text>
+                      <Text style={styles.summaryLabel}>
+                        {item.direction === "arrival" ? "arrival" : "departure"}
+                      </Text>
+                    </View>
+                    <View style={styles.toolCopy}>
+                      <Text style={styles.feedTitle}>
+                        {getConnectionName(item.connectionId)} • {item.flightCode}
+                      </Text>
+                      <Text style={styles.feedMeta}>{formatDateRange(item.travelDate)}</Text>
+                      <Text style={styles.feedMeta}>{item.routeNote}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removeTrackedFlight(item.id)}
+                  >
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
               ))}
-            </View>
-          </View>
 
-          <View style={styles.editorCard}>
-            <Text style={styles.subsectionTitle}>Add a coming-or-going flight</Text>
-            <View style={styles.inputStack}>
-              <View style={styles.selectWrap}>
-                <TouchableOpacity
-                  style={styles.selectButton}
-                  onPress={() =>
-                    setOpenTrackedFlightPersonMenu((current) => !current)
-                  }
-                >
-                  <Text style={styles.selectButtonText}>{trackedFlightPersonName}</Text>
-                  <Text style={styles.selectChevron}>
-                    {openTrackedFlightPersonMenu ? "▲" : "▼"}
-                  </Text>
-                </TouchableOpacity>
-                {openTrackedFlightPersonMenu ? (
-                  <View style={styles.optionList}>
-                    {connections.map((connection) => (
-                      <TouchableOpacity
-                        key={`tracked-person-${connection.id}`}
-                        style={styles.optionRow}
-                        onPress={() => {
-                          setDraftTrackedFlightConnectionId(connection.id);
-                          setOpenTrackedFlightPersonMenu(false);
-                        }}
-                      >
-                        <Text style={styles.optionText}>{connection.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-              <View style={styles.selectWrap}>
-                <TouchableOpacity
-                  style={styles.selectButton}
-                  onPress={() =>
-                    setOpenTrackedFlightDirectionMenu((current) => !current)
-                  }
-                >
-                  <Text style={styles.selectButtonText}>
-                    {draftTrackedFlightDirection === "arrival" ? "Arrival" : "Departure"}
-                  </Text>
-                  <Text style={styles.selectChevron}>
-                    {openTrackedFlightDirectionMenu ? "▲" : "▼"}
-                  </Text>
-                </TouchableOpacity>
-                {openTrackedFlightDirectionMenu ? (
-                  <View style={styles.optionList}>
-                    {["arrival", "departure"].map((direction) => (
-                      <TouchableOpacity
-                        key={`tracked-direction-${direction}`}
-                        style={styles.optionRow}
-                        onPress={() => {
-                          setDraftTrackedFlightDirection(direction as "arrival" | "departure");
-                          setOpenTrackedFlightDirectionMenu(false);
-                        }}
-                      >
-                        <Text style={styles.optionText}>
-                          {direction === "arrival" ? "Arrival" : "Departure"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-              <CalendarRangePicker
-                title="Flight day"
-                summary={draftTrackedFlightDateSummary}
-                monthDate={trackerCalendarMonth}
-                startDate={draftTrackedFlightDate}
-                isOpen={openCalendarPicker === "tracker"}
-                onToggle={() =>
-                  setOpenCalendarPicker((current) => (current === "tracker" ? null : "tracker"))
-                }
-                onShiftMonth={shiftTrackerCalendarMonth}
-                onSelectDate={selectTrackedFlightDate}
-                onClear={() => setDraftTrackedFlightDate("")}
-                helperText="Use one date to track when someone arrives or heads home."
-              />
-              <TextInput
-                value={draftTrackedFlightCode}
-                onChangeText={setDraftTrackedFlightCode}
-                placeholder="Flight code, ex: AA 1472"
-                placeholderTextColor="#A08F89"
-                style={styles.textInput}
-              />
-              <TextInput
-                value={draftTrackedFlightRouteNote}
-                onChangeText={setDraftTrackedFlightRouteNote}
-                placeholder="Arrival or departure note"
-                placeholderTextColor="#A08F89"
-                style={[styles.textInput, styles.detailInput]}
-                multiline
-              />
-            </View>
-            <TouchableOpacity style={styles.primaryButton} onPress={addTrackedFlight}>
-              <Text style={styles.primaryButtonText}>Add tracked flight</Text>
-            </TouchableOpacity>
-          </View>
-
-          {visibleTrackedFlights.map((item) => (
-            <View key={item.id} style={styles.tripSummaryCard}>
-              <View style={styles.summaryHeader}>
-                <View style={styles.summaryBadge}>
-                  <Text style={styles.summaryValue}>
-                    {item.direction === "arrival" ? "IN" : "OUT"}
-                  </Text>
-                  <Text style={styles.summaryLabel}>
-                    {item.direction === "arrival" ? "arrival" : "departure"}
+              {!visibleTrackedFlights.length ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.feedMeta}>
+                    No arrival or departure flights tracked yet for this trip. Add one above so you can plan pickups and goodbyes together.
                   </Text>
                 </View>
-                <View style={styles.toolCopy}>
-                  <Text style={styles.feedTitle}>
-                    {getConnectionName(item.connectionId)} • {item.flightCode}
-                  </Text>
-                  <Text style={styles.feedMeta}>{formatDateRange(item.travelDate)}</Text>
-                  <Text style={styles.feedMeta}>{item.routeNote}</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.removeButton}
-                onPress={() => removeTrackedFlight(item.id)}
-              >
-                <Text style={styles.removeButtonText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          {!visibleTrackedFlights.length ? (
+              ) : null}
+            </>
+          ) : (
             <View style={styles.emptyState}>
               <Text style={styles.feedMeta}>
-                No arrival or departure flights tracked yet for this trip. Add one above so you can plan pickups and goodbyes together.
+                Add a trip first, then you can track arrivals and departures for the people in it.
               </Text>
             </View>
-          ) : null}
+          )}
         </View>
 
         <View style={styles.subsectionBlock}>
@@ -1338,213 +1395,240 @@ export function TripsScreen() {
               </View>
             </View>
           ))}
-        </View>
-
-        <View style={styles.subsectionBlock}>
-          <Text style={styles.subsectionTitle}>Packing checklist</Text>
-          <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Choose a trip or city</Text>
-            <View style={styles.chipWrap}>
-              {[...trips.map((visit) => visit.location), "Any trip"].map((trip) => (
-                <FilterChip
-                  key={trip}
-                  label={trip}
-                  active={selectedPackingTrip === trip}
-                  onPress={() => setSelectedPackingTrip(trip)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.editorCard}>
-            <Text style={styles.subsectionTitle}>Add a packing item</Text>
-            <View style={styles.inputStack}>
-              <TextInput
-                value={draftPackingLabel}
-                onChangeText={setDraftPackingLabel}
-                placeholder={`Add an item for ${selectedPackingTrip}`}
-                placeholderTextColor="#A08F89"
-                style={styles.textInput}
-              />
-            </View>
-            <TouchableOpacity style={styles.primaryButton} onPress={addPackingItem}>
-              <Text style={styles.primaryButtonText}>Add item</Text>
-            </TouchableOpacity>
-          </View>
-
-          {visiblePackingItems.map((item) => (
-            <View key={item.id} style={styles.checkEditorRow}>
-              <TouchableOpacity style={styles.checkToggle} onPress={() => togglePackedItem(item.id)} activeOpacity={0.9}>
-                <View style={[styles.checkCircle, packedItems.includes(item.id) && styles.checkCircleActive]}>
-                  {packedItems.includes(item.id) ? <Text style={styles.checkMark}>✓</Text> : null}
-                </View>
-              </TouchableOpacity>
-              <View style={styles.toolCopy}>
-                <TextInput value={item.label} onChangeText={(value) => updatePackingItem(item.id, value)} placeholder="Packing item" placeholderTextColor="#A08F89" style={styles.textInput} />
-                <Text style={styles.helperMeta}>{packedItems.includes(item.id) ? "Packed" : "Tap circle when packed"}</Text>
-              </View>
-              <TouchableOpacity style={styles.removeButton} onPress={() => removePackingItem(item.id)}>
-                <Text style={styles.removeButtonText}>Remove</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-
-          {!visiblePackingItems.length ? (
+          {!visibleWeatherForecasts.length ? (
             <View style={styles.emptyState}>
-              <Text style={styles.feedMeta}>No packing items yet for this trip. Add a few essentials to start the checklist.</Text>
+              <Text style={styles.feedMeta}>
+                Add a trip and its city first, then weather guidance will appear here.
+              </Text>
             </View>
           ) : null}
         </View>
 
         <View style={styles.subsectionBlock}>
-          <Text style={styles.subsectionTitle}>Shared trip budget</Text>
-          <View style={styles.controlGroup}>
-            <Text style={styles.controlLabel}>Choose a trip or city</Text>
-            <View style={styles.chipWrap}>
-              {trips.map((visit) => (
-                <FilterChip
-                  key={visit.id}
-                  label={visit.location}
-                  active={selectedBudgetTrip === visit.location}
-                  onPress={() => setSelectedBudgetTrip(visit.location)}
-                />
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.totalCard}>
-            <Text style={styles.totalLabel}>Current shared total</Text>
-            <Text style={styles.totalValue}>${budgetTotal.toFixed(2)}</Text>
-          </View>
-
-          {isBudgetClosed ? (
-            <View style={styles.closedSummaryCard}>
-              <Text style={styles.feedTitle}>{selectedBudgetTrip} budget closed</Text>
-              <Text style={styles.feedMeta}>
-                {visibleBudgetItems.length} expenses recorded and reconciled for this trip.
-              </Text>
-              <TouchableOpacity style={styles.secondaryAction} onPress={reopenBudgetTrip}>
-                <Text style={styles.secondaryActionText}>Reopen budget</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
+          <Text style={styles.subsectionTitle}>Packing checklist</Text>
+          {trips.length ? (
             <>
-              <View style={styles.editorCard}>
-                <Text style={styles.subsectionTitle}>Add a custom expense</Text>
-                <View style={styles.inputStack}>
-                  <TextInput value={draftBudgetLabel} onChangeText={setDraftBudgetLabel} placeholder="Expense item, ex: dinner reservation" placeholderTextColor="#A08F89" style={styles.textInput} />
-                  <View style={styles.selectWrap}>
-                    <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetCategoryMenu((current) => (current === "new" ? null : "new"))}>
-                      <Text style={[styles.selectButtonText, !draftBudgetCategory && styles.selectPlaceholder]}>
-                        {draftBudgetCategory || "Choose category"}
-                      </Text>
-                      <Text style={styles.selectChevron}>{openBudgetCategoryMenu === "new" ? "▲" : "▼"}</Text>
-                    </TouchableOpacity>
-                    {openBudgetCategoryMenu === "new" ? (
-                      <View style={styles.optionList}>
-                        {budgetCategories.map((category) => (
-                          <TouchableOpacity key={category} style={styles.optionRow} onPress={() => { setDraftBudgetCategory(category); setOpenBudgetCategoryMenu(null); }}>
-                            <Text style={styles.optionText}>{category}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  <View style={styles.selectWrap}>
-                    <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetPayerMenu((current) => (current === "new" ? null : "new"))}>
-                      <Text style={[styles.selectButtonText, !draftBudgetPayer && styles.selectPlaceholder]}>
-                        {draftBudgetPayer || "Who paid?"}
-                      </Text>
-                      <Text style={styles.selectChevron}>{openBudgetPayerMenu === "new" ? "▲" : "▼"}</Text>
-                    </TouchableOpacity>
-                    {openBudgetPayerMenu === "new" ? (
-                      <View style={styles.optionList}>
-                        {budgetPayers.map((payer) => (
-                          <TouchableOpacity key={payer} style={styles.optionRow} onPress={() => { setDraftBudgetPayer(payer); setOpenBudgetPayerMenu(null); }}>
-                            <Text style={styles.optionText}>{payer}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  <TextInput value={draftBudgetAmount} onChangeText={setDraftBudgetAmount} placeholder="Amount, ex: 42" placeholderTextColor="#A08F89" style={styles.textInput} keyboardType="decimal-pad" />
+              <View style={styles.controlGroup}>
+                <Text style={styles.controlLabel}>Choose a trip or city</Text>
+                <View style={styles.chipWrap}>
+                  {[...trips.map((visit) => visit.location), "Any trip"].map((trip) => (
+                    <FilterChip
+                      key={trip}
+                      label={trip}
+                      active={selectedPackingTrip === trip}
+                      onPress={() => setSelectedPackingTrip(trip)}
+                    />
+                  ))}
                 </View>
-                <TouchableOpacity style={styles.primaryButton} onPress={addCustomBudgetItem}>
-                  <Text style={styles.primaryButtonText}>Add expense</Text>
+              </View>
+
+              <View style={styles.editorCard}>
+                <Text style={styles.subsectionTitle}>Add a packing item</Text>
+                <View style={styles.inputStack}>
+                  <TextInput
+                    value={draftPackingLabel}
+                    onChangeText={setDraftPackingLabel}
+                    placeholder={`Add an item for ${selectedPackingTrip}`}
+                    placeholderTextColor="#A08F89"
+                    style={styles.textInput}
+                  />
+                </View>
+                <TouchableOpacity style={styles.primaryButton} onPress={addPackingItem}>
+                  <Text style={styles.primaryButtonText}>Add item</Text>
                 </TouchableOpacity>
               </View>
 
-              {visibleBudgetItems.map((item) => (
-                <View key={item.id} style={styles.budgetEditorRow}>
-                  <View style={styles.budgetFieldStack}>
-                    <TextInput value={item.label} onChangeText={(value) => updateBudgetItem(item.id, "label", value)} placeholder="Expense item" placeholderTextColor="#A08F89" style={styles.textInput} />
-                    <View style={styles.budgetMetaRow}>
-                      <View style={[styles.selectWrap, styles.metaInput]}>
-                        <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetCategoryMenu((current) => (current === item.id ? null : item.id))}>
-                          <Text style={styles.selectButtonText}>{item.category}</Text>
-                          <Text style={styles.selectChevron}>{openBudgetCategoryMenu === item.id ? "▲" : "▼"}</Text>
+              {visiblePackingItems.map((item) => (
+                <View key={item.id} style={styles.checkEditorRow}>
+                  <TouchableOpacity style={styles.checkToggle} onPress={() => togglePackedItem(item.id)} activeOpacity={0.9}>
+                    <View style={[styles.checkCircle, packedItems.includes(item.id) && styles.checkCircleActive]}>
+                      {packedItems.includes(item.id) ? <Text style={styles.checkMark}>✓</Text> : null}
+                    </View>
+                  </TouchableOpacity>
+                  <View style={styles.toolCopy}>
+                    <TextInput value={item.label} onChangeText={(value) => updatePackingItem(item.id, value)} placeholder="Packing item" placeholderTextColor="#A08F89" style={styles.textInput} />
+                    <Text style={styles.helperMeta}>{packedItems.includes(item.id) ? "Packed" : "Tap circle when packed"}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.removeButton} onPress={() => removePackingItem(item.id)}>
+                    <Text style={styles.removeButtonText}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+
+              {!visiblePackingItems.length ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.feedMeta}>No packing items yet for this trip. Add a few essentials to start the checklist.</Text>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.feedMeta}>
+                Add a trip first, then you can build a packing list for it here.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.subsectionBlock}>
+          <Text style={styles.subsectionTitle}>Shared trip budget</Text>
+          {trips.length ? (
+            <>
+              <View style={styles.controlGroup}>
+                <Text style={styles.controlLabel}>Choose a trip or city</Text>
+                <View style={styles.chipWrap}>
+                  {trips.map((visit) => (
+                    <FilterChip
+                      key={visit.id}
+                      label={visit.location}
+                      active={selectedBudgetTrip === visit.location}
+                      onPress={() => setSelectedBudgetTrip(visit.location)}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.totalCard}>
+                <Text style={styles.totalLabel}>Current shared total</Text>
+                <Text style={styles.totalValue}>${budgetTotal.toFixed(2)}</Text>
+              </View>
+
+              {isBudgetClosed ? (
+                <View style={styles.closedSummaryCard}>
+                  <Text style={styles.feedTitle}>{selectedBudgetTrip} budget closed</Text>
+                  <Text style={styles.feedMeta}>
+                    {visibleBudgetItems.length} expenses recorded and reconciled for this trip.
+                  </Text>
+                  <TouchableOpacity style={styles.secondaryAction} onPress={reopenBudgetTrip}>
+                    <Text style={styles.secondaryActionText}>Reopen budget</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.editorCard}>
+                    <Text style={styles.subsectionTitle}>Add a custom expense</Text>
+                    <View style={styles.inputStack}>
+                      <TextInput value={draftBudgetLabel} onChangeText={setDraftBudgetLabel} placeholder="Expense item, ex: dinner reservation" placeholderTextColor="#A08F89" style={styles.textInput} />
+                      <View style={styles.selectWrap}>
+                        <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetCategoryMenu((current) => (current === "new" ? null : "new"))}>
+                          <Text style={[styles.selectButtonText, !draftBudgetCategory && styles.selectPlaceholder]}>
+                            {draftBudgetCategory || "Choose category"}
+                          </Text>
+                          <Text style={styles.selectChevron}>{openBudgetCategoryMenu === "new" ? "▲" : "▼"}</Text>
                         </TouchableOpacity>
-                        {openBudgetCategoryMenu === item.id ? (
+                        {openBudgetCategoryMenu === "new" ? (
                           <View style={styles.optionList}>
                             {budgetCategories.map((category) => (
-                              <TouchableOpacity key={`${item.id}-${category}`} style={styles.optionRow} onPress={() => { updateBudgetItem(item.id, "category", category); setOpenBudgetCategoryMenu(null); }}>
+                              <TouchableOpacity key={category} style={styles.optionRow} onPress={() => { setDraftBudgetCategory(category); setOpenBudgetCategoryMenu(null); }}>
                                 <Text style={styles.optionText}>{category}</Text>
                               </TouchableOpacity>
                             ))}
                           </View>
                         ) : null}
                       </View>
-                      <View style={[styles.selectWrap, styles.metaInput]}>
-                        <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetPayerMenu((current) => (current === item.id ? null : item.id))}>
-                          <Text style={styles.selectButtonText}>{item.payer}</Text>
-                          <Text style={styles.selectChevron}>{openBudgetPayerMenu === item.id ? "▲" : "▼"}</Text>
+                      <View style={styles.selectWrap}>
+                        <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetPayerMenu((current) => (current === "new" ? null : "new"))}>
+                          <Text style={[styles.selectButtonText, !draftBudgetPayer && styles.selectPlaceholder]}>
+                            {draftBudgetPayer || "Who paid?"}
+                          </Text>
+                          <Text style={styles.selectChevron}>{openBudgetPayerMenu === "new" ? "▲" : "▼"}</Text>
                         </TouchableOpacity>
-                        {openBudgetPayerMenu === item.id ? (
+                        {openBudgetPayerMenu === "new" ? (
                           <View style={styles.optionList}>
                             {budgetPayers.map((payer) => (
-                              <TouchableOpacity key={`${item.id}-${payer}`} style={styles.optionRow} onPress={() => { updateBudgetItem(item.id, "payer", payer); setOpenBudgetPayerMenu(null); }}>
+                              <TouchableOpacity key={payer} style={styles.optionRow} onPress={() => { setDraftBudgetPayer(payer); setOpenBudgetPayerMenu(null); }}>
                                 <Text style={styles.optionText}>{payer}</Text>
                               </TouchableOpacity>
                             ))}
                           </View>
                         ) : null}
                       </View>
-                      <TextInput value={item.amount ? item.amount.toString() : ""} onChangeText={(value) => updateBudgetItem(item.id, "amount", value)} placeholder="0" placeholderTextColor="#A08F89" style={[styles.textInput, styles.amountInput]} keyboardType="decimal-pad" />
+                      <TextInput value={draftBudgetAmount} onChangeText={setDraftBudgetAmount} placeholder="Amount, ex: 42" placeholderTextColor="#A08F89" style={styles.textInput} keyboardType="decimal-pad" />
                     </View>
+                    <TouchableOpacity style={styles.primaryButton} onPress={addCustomBudgetItem}>
+                      <Text style={styles.primaryButtonText}>Add expense</Text>
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity style={styles.removeButton} onPress={() => removeBudgetItem(item.id)}>
-                    <Text style={styles.removeButtonText}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
 
-              {!visibleBudgetItems.length ? (
-                <View style={styles.emptyState}>
-                  <Text style={styles.feedMeta}>No expenses recorded yet for this trip. Add the first one to start the budget.</Text>
-                </View>
-              ) : null}
-
-              <Text style={styles.controlLabel}>Quick add shared expenses</Text>
-              {visibleBudgetSuggestions.map((item) => {
-                const alreadyAdded = budgetItems.some((entry) => entry.id === item.id);
-
-                return (
-                  <TouchableOpacity key={item.id} style={[styles.budgetRow, alreadyAdded && styles.budgetRowDisabled]} onPress={() => addBudgetItem(item)} disabled={alreadyAdded} activeOpacity={0.9}>
-                    <View style={styles.toolCopy}>
-                      <Text style={styles.feedMeta}>{item.label}</Text>
-                      <Text style={styles.helperMeta}>
-                        {item.category} | {item.payer} paid | ${item.amount.toFixed(2)}
-                      </Text>
+                  {visibleBudgetItems.map((item) => (
+                    <View key={item.id} style={styles.budgetEditorRow}>
+                      <View style={styles.budgetFieldStack}>
+                        <TextInput value={item.label} onChangeText={(value) => updateBudgetItem(item.id, "label", value)} placeholder="Expense item" placeholderTextColor="#A08F89" style={styles.textInput} />
+                        <View style={styles.budgetMetaRow}>
+                          <View style={[styles.selectWrap, styles.metaInput]}>
+                            <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetCategoryMenu((current) => (current === item.id ? null : item.id))}>
+                              <Text style={styles.selectButtonText}>{item.category}</Text>
+                              <Text style={styles.selectChevron}>{openBudgetCategoryMenu === item.id ? "▲" : "▼"}</Text>
+                            </TouchableOpacity>
+                            {openBudgetCategoryMenu === item.id ? (
+                              <View style={styles.optionList}>
+                                {budgetCategories.map((category) => (
+                                  <TouchableOpacity key={`${item.id}-${category}`} style={styles.optionRow} onPress={() => { updateBudgetItem(item.id, "category", category); setOpenBudgetCategoryMenu(null); }}>
+                                    <Text style={styles.optionText}>{category}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            ) : null}
+                          </View>
+                          <View style={[styles.selectWrap, styles.metaInput]}>
+                            <TouchableOpacity style={styles.selectButton} onPress={() => setOpenBudgetPayerMenu((current) => (current === item.id ? null : item.id))}>
+                              <Text style={styles.selectButtonText}>{item.payer}</Text>
+                              <Text style={styles.selectChevron}>{openBudgetPayerMenu === item.id ? "▲" : "▼"}</Text>
+                            </TouchableOpacity>
+                            {openBudgetPayerMenu === item.id ? (
+                              <View style={styles.optionList}>
+                                {budgetPayers.map((payer) => (
+                                  <TouchableOpacity key={`${item.id}-${payer}`} style={styles.optionRow} onPress={() => { updateBudgetItem(item.id, "payer", payer); setOpenBudgetPayerMenu(null); }}>
+                                    <Text style={styles.optionText}>{payer}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            ) : null}
+                          </View>
+                          <TextInput value={item.amount ? item.amount.toString() : ""} onChangeText={(value) => updateBudgetItem(item.id, "amount", value)} placeholder="0" placeholderTextColor="#A08F89" style={[styles.textInput, styles.amountInput]} keyboardType="decimal-pad" />
+                        </View>
+                      </View>
+                      <TouchableOpacity style={styles.removeButton} onPress={() => removeBudgetItem(item.id)}>
+                        <Text style={styles.removeButtonText}>Remove</Text>
+                      </TouchableOpacity>
                     </View>
-                    <Text style={styles.addBudgetText}>{alreadyAdded ? "Added" : "Add"}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+                  ))}
 
-              <TouchableOpacity style={styles.secondaryAction} onPress={closeBudgetTrip}>
-                <Text style={styles.secondaryActionText}>Close out this trip budget</Text>
-              </TouchableOpacity>
+                  {!visibleBudgetItems.length ? (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.feedMeta}>No expenses recorded yet for this trip. Add the first one to start the budget.</Text>
+                    </View>
+                  ) : null}
+
+                  <Text style={styles.controlLabel}>Quick add shared expenses</Text>
+                  {visibleBudgetSuggestions.map((item) => {
+                    const alreadyAdded = budgetItems.some((entry) => entry.id === item.id);
+
+                    return (
+                      <TouchableOpacity key={item.id} style={[styles.budgetRow, alreadyAdded && styles.budgetRowDisabled]} onPress={() => addBudgetItem(item)} disabled={alreadyAdded} activeOpacity={0.9}>
+                        <View style={styles.toolCopy}>
+                          <Text style={styles.feedMeta}>{item.label}</Text>
+                          <Text style={styles.helperMeta}>
+                            {item.category} | {item.payer} paid | ${item.amount.toFixed(2)}
+                          </Text>
+                        </View>
+                        <Text style={styles.addBudgetText}>{alreadyAdded ? "Added" : "Add"}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  <TouchableOpacity style={styles.secondaryAction} onPress={closeBudgetTrip}>
+                    <Text style={styles.secondaryActionText}>Close out this trip budget</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.feedMeta}>
+                Add a trip first, then you can track its shared costs and close the budget when done.
+              </Text>
+            </View>
           )}
         </View>
       </SectionCard>

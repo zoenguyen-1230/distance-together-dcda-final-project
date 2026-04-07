@@ -3,30 +3,42 @@ import { StyleSheet, Text, View } from "react-native";
 import { composerActions, conversations } from "../../data/mockData";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
+import { useAuth } from "../../providers/AuthProvider";
 import { palette } from "../../theme/palette";
 
 export function ChatScreen() {
+  const { isDemoMode } = useAuth();
+  const liveConversations = isDemoMode ? conversations : [];
+
   return (
     <ScreenSurface>
       <SectionCard
         title="Messages"
         subtitle="Text, photos, voice notes, and video messages in one asynchronous thread"
       >
-        {conversations.map((message) => (
-          <View
-            key={message.id}
-            style={[
-              styles.messageBubble,
-              message.from === "You" ? styles.messageBubbleSelf : styles.messageBubbleOther,
-            ]}
-          >
-            <Text style={styles.messageMeta}>
-              {message.from} | {message.type}
+        {liveConversations.length ? (
+          liveConversations.map((message) => (
+            <View
+              key={message.id}
+              style={[
+                styles.messageBubble,
+                message.from === "You" ? styles.messageBubbleSelf : styles.messageBubbleOther,
+              ]}
+            >
+              <Text style={styles.messageMeta}>
+                {message.from} | {message.type}
+              </Text>
+              <Text style={styles.messageBody}>{message.body}</Text>
+              <Text style={styles.messageTime}>{message.sentAt}</Text>
+            </View>
+          ))
+        ) : (
+          <View style={styles.emptyCard}>
+            <Text style={styles.messageBody}>
+              New accounts start with an empty thread. Add someone in `People` to begin your first chat.
             </Text>
-            <Text style={styles.messageBody}>{message.body}</Text>
-            <Text style={styles.messageTime}>{message.sentAt}</Text>
           </View>
-        ))}
+        )}
       </SectionCard>
 
       <SectionCard
@@ -95,5 +107,12 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 16,
     fontWeight: "700",
+  },
+  emptyCard: {
+    borderRadius: 22,
+    padding: 16,
+    backgroundColor: "#F5EFEA",
+    borderWidth: 1,
+    borderColor: palette.line,
   },
 });

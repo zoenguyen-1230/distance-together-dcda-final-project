@@ -7,6 +7,7 @@ import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { connections, moodUpdates, nextVisit, promptDeck } from "../../data/mockData";
 import { useAuth } from "../../providers/AuthProvider";
+import { useProfile } from "../../providers/ProfileProvider";
 import { palette } from "../../theme/palette";
 
 const moodOptions = ["hopeful", "busy", "calm", "excited"];
@@ -14,7 +15,11 @@ const energyOptions = ["low", "steady", "high"];
 const healthOptions = ["rested", "okay", "needs rest", "on the go"];
 
 export function HomeScreen() {
-  const { displayName, userEmail, isDemoMode } = useAuth();
+  const { displayName, userEmail, isDemoMode, previewMode } = useAuth();
+  const { profile } = useProfile();
+  const liveConnections = isDemoMode ? connections : [];
+  const liveMoodUpdates = isDemoMode ? moodUpdates : [];
+  const liveNextVisit = isDemoMode ? nextVisit : null;
   const [selectedPrompt, setSelectedPrompt] = useState(promptDeck[0]);
   const [myMood, setMyMood] = useState("calm");
   const [myEnergy, setMyEnergy] = useState("steady");
@@ -22,7 +27,9 @@ export function HomeScreen() {
   const [openStatusMenu, setOpenStatusMenu] = useState<"mood" | "energy" | "health" | null>(
     null
   );
-  const [selectedAudience, setSelectedAudience] = useState<string[]>(["conn-1", "conn-3"]);
+  const [selectedAudience, setSelectedAudience] = useState<string[]>(
+    isDemoMode ? ["conn-1", "conn-3"] : []
+  );
   const [statusSent, setStatusSent] = useState(false);
 
   const toggleAudience = (connectionId: string) => {
@@ -46,20 +53,28 @@ export function HomeScreen() {
         style={styles.banner}
       >
         <Text style={styles.bannerEyebrow}>
-          {isDemoMode ? "Prototype mode" : "Live account"}
+          {previewMode === "filled"
+            ? "Preview: Full demo"
+            : previewMode === "blank"
+              ? "Preview: Blank account"
+              : isDemoMode
+                ? "Prototype mode"
+                : "Live account"}
         </Text>
         <Text style={styles.bannerTitle}>
-          Welcome back, {displayName || userEmail?.split("@")[0] || "friend"}.
+          Welcome back, {profile.displayName || displayName || userEmail?.split("@")[0] || "friend"}.
         </Text>
         <Text style={styles.bannerBody}>
-          {nextVisit.daysAway} days until your next time together in {nextVisit.location}.
+          {liveNextVisit
+            ? `${liveNextVisit.daysAway} days until your next time together in ${liveNextVisit.location}.`
+            : "Start by setting up your profile and adding your first person."}
         </Text>
       </LinearGradient>
 
       <View style={styles.metricRow}>
-        <MetricCard label="Streak" value="14 days" accent={palette.coral} />
-        <MetricCard label="Shared entries" value="42" accent={palette.teal} />
-        <MetricCard label="Pending capsules" value="3" accent={palette.berry} />
+        <MetricCard label="Streak" value={isDemoMode ? "14 days" : "0 days"} accent={palette.coral} />
+        <MetricCard label="Shared entries" value={isDemoMode ? "42" : "0"} accent={palette.teal} />
+        <MetricCard label="Pending capsules" value={isDemoMode ? "3" : "0"} accent={palette.berry} />
       </View>
 
       <SectionCard
@@ -70,6 +85,11 @@ export function HomeScreen() {
           <Text style={styles.feedTitle}>How are you showing up today?</Text>
           <Text style={styles.feedMeta}>
             Mood: {myMood} | Energy: {myEnergy} | Health: {myHealth}
+          </Text>
+          <Text style={styles.feedSubtle}>
+            Sharing as {profile.displayName}
+            {profile.location ? ` • ${profile.location}` : ""}
+            {profile.timezone ? ` • ${profile.timezone}` : ""}
           </Text>
         </View>
 
@@ -168,16 +188,24 @@ export function HomeScreen() {
 
         <View style={styles.controlGroup}>
           <Text style={styles.controlLabel}>Send to</Text>
-          <View style={styles.chipWrap}>
-            {connections.map((connection) => (
-              <FilterChip
-                key={connection.id}
-                label={connection.name}
-                active={selectedAudience.includes(connection.id)}
-                onPress={() => toggleAudience(connection.id)}
-              />
-            ))}
-          </View>
+          {liveConnections.length ? (
+            <View style={styles.chipWrap}>
+              {liveConnections.map((connection) => (
+                <FilterChip
+                  key={connection.id}
+                  label={connection.name}
+                  active={selectedAudience.includes(connection.id)}
+                  onPress={() => toggleAudience(connection.id)}
+                />
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.feedMeta}>
+                Add someone in `People` before sending a live status update.
+              </Text>
+            </View>
+          )}
         </View>
 
         <TouchableOpacity style={styles.primaryButton} onPress={sendStatus}>
@@ -188,7 +216,7 @@ export function HomeScreen() {
           <View style={styles.sentCard}>
             <Text style={styles.feedSubtle}>
               Sent to{" "}
-              {connections
+              {liveConnections
                 .filter((connection) => selectedAudience.includes(connection.id))
                 .map((connection) => connection.name)
                 .join(", ") || "your circle"}
@@ -221,20 +249,28 @@ export function HomeScreen() {
         title="Mood sharing"
         subtitle="Quick emotional and wellness updates from your people"
       >
-        {moodUpdates.map((mood) => (
-          <View key={mood.id} style={styles.feedCard}>
-            <View style={[styles.avatarBadge, { backgroundColor: mood.color }]}>
-              <Text style={styles.avatarLabel}>{mood.name[0]}</Text>
+        {liveMoodUpdates.length ? (
+          liveMoodUpdates.map((mood) => (
+            <View key={mood.id} style={styles.feedCard}>
+              <View style={[styles.avatarBadge, { backgroundColor: mood.color }]}>
+                <Text style={styles.avatarLabel}>{mood.name[0]}</Text>
+              </View>
+              <View style={styles.feedCopy}>
+                <Text style={styles.feedTitle}>{mood.name} feels {mood.mood}</Text>
+                <Text style={styles.feedMeta}>
+                  Energy: {mood.energy} | Health: {mood.health}
+                </Text>
+                <Text style={styles.feedSubtle}>{mood.updatedAt}</Text>
+              </View>
             </View>
-            <View style={styles.feedCopy}>
-              <Text style={styles.feedTitle}>{mood.name} feels {mood.mood}</Text>
-              <Text style={styles.feedMeta}>
-                Energy: {mood.energy} | Health: {mood.health}
-              </Text>
-              <Text style={styles.feedSubtle}>{mood.updatedAt}</Text>
-            </View>
+          ))
+        ) : (
+          <View style={styles.emptyCard}>
+            <Text style={styles.feedMeta}>
+              Mood updates from your people will appear here once you start connecting.
+            </Text>
           </View>
-        ))}
+        )}
       </SectionCard>
     </ScreenSurface>
   );
@@ -357,6 +393,13 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "#CDEBDD",
+    padding: 14,
+  },
+  emptyCard: {
+    backgroundColor: "#FFF8F2",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.line,
     padding: 14,
   },
   feedCard: {

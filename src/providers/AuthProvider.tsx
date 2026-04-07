@@ -10,6 +10,8 @@ import type { Session, User } from "@supabase/supabase-js";
 import { hasSupabaseCredentials } from "../config/env";
 import { supabase } from "../lib/supabase";
 
+type PreviewMode = "filled" | "blank" | null;
+
 interface AuthResult {
   error: string | null;
 }
@@ -17,6 +19,7 @@ interface AuthResult {
 interface AuthContextValue {
   initialized: boolean;
   isDemoMode: boolean;
+  previewMode: PreviewMode;
   session: Session | null;
   user: User | null;
   userEmail: string | null;
@@ -28,13 +31,54 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function readPreviewMode(): PreviewMode {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const previewValue = new URLSearchParams(window.location.search).get("preview");
+
+  if (previewValue === "filled" || previewValue === "blank") {
+    return previewValue;
+  }
+
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [previewMode, setPreviewMode] = useState<PreviewMode>(() => readPreviewMode());
   const [initialized, setInitialized] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [demoUserEmail, setDemoUserEmail] = useState<string | null>(null);
   const [demoDisplayName, setDemoDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return undefined;
+    }
+
+    const syncPreviewMode = () => {
+      setPreviewMode(readPreviewMode());
+    };
+
+    window.addEventListener("popstate", syncPreviewMode);
+
+    return () => {
+      window.removeEventListener("popstate", syncPreviewMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (previewMode) {
+      startTransition(() => {
+        setSession(null);
+        setDemoUserEmail(`${previewMode}-preview@distance-together.demo`);
+        setDemoDisplayName(previewMode === "filled" ? "Full Demo" : "Blank Demo");
+        setInitialized(true);
+      });
+      return;
+    }
+
     if (!hasSupabaseCredentials) {
       setInitialized(true);
       return;
@@ -127,6 +171,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    if (typeof window !== "undefined") {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.delete("preview");
+      window.history.replaceState({}, "", nextUrl.toString());
+      setPreviewMode(null);
+    }
+
     await supabase.auth.signOut();
   };
 
@@ -139,7 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return {
       initialized,
-      isDemoMode: !hasSupabaseCredentials,
+      isDemoMode: previewMode === "filled" || !hasSupabaseCredentials,
+      previewMode,
       session,
       user,
       userEmail: user?.email ?? demoUserEmail,
@@ -148,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signOut,
     };
-  }, [demoDisplayName, demoUserEmail, initialized, session]);
+  }, [demoDisplayName, demoUserEmail, initialized, previewMode, session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -7,6 +7,7 @@ import {
 } from "../../data/mockData";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
+import { useAuth } from "../../providers/AuthProvider";
 import { palette } from "../../theme/palette";
 
 function getJournalDateParts(date: string) {
@@ -19,8 +20,11 @@ function getJournalDateParts(date: string) {
 }
 
 export function SharedScreen() {
-  const [entries, setEntries] = useState(journalEntries);
+  const { isDemoMode } = useAuth();
+  const [entries, setEntries] = useState(isDemoMode ? journalEntries : []);
   const [draftPhotos, setDraftPhotos] = useState<Record<string, string>>({});
+  const liveTimeCapsules = isDemoMode ? timeCapsules : [];
+  const liveCalendarEvents = isDemoMode ? calendarEvents : [];
 
   const addPhotoToEntry = (entryId: string, label: string) => {
     const cleanLabel = label.trim();
@@ -62,7 +66,7 @@ export function SharedScreen() {
         title="Shared journal"
         subtitle="Capture the moments that matter, not just the messages you send"
       >
-        {entries.map((entry) => (
+        {entries.length ? entries.map((entry) => (
           <View key={entry.id} style={styles.timelineCard}>
             <View style={styles.timelineHeader}>
               <View style={styles.timelineBadge}>
@@ -142,14 +146,20 @@ export function SharedScreen() {
               </View>
             </View>
           </View>
-        ))}
+        )) : (
+          <View style={styles.emptyCard}>
+            <Text style={styles.feedMeta}>
+              Your shared journal starts blank. Add your first memory once you begin using the app together.
+            </Text>
+          </View>
+        )}
       </SectionCard>
 
       <SectionCard
         title="Time capsule"
         subtitle="Leave something meaningful for later"
       >
-        {timeCapsules.map((capsule) => (
+        {liveTimeCapsules.length ? liveTimeCapsules.map((capsule) => (
           <View key={capsule.id} style={styles.feedCard}>
             <View style={styles.capsuleBadge}>
               <Text style={styles.capsuleBadgeText}>TC</Text>
@@ -161,14 +171,20 @@ export function SharedScreen() {
               </Text>
             </View>
           </View>
-        ))}
+        )) : (
+          <View style={styles.emptyCard}>
+            <Text style={styles.feedMeta}>
+              Time capsules will show up here after you save your first message for later.
+            </Text>
+          </View>
+        )}
       </SectionCard>
 
       <SectionCard
         title="Shared calendar"
         subtitle="Stay aligned on rituals, travel, birthdays, and intentional time together"
       >
-        {calendarEvents.map((event) => (
+        {liveCalendarEvents.length ? liveCalendarEvents.map((event) => (
           <View key={event.id} style={styles.calendarRow}>
             <View style={styles.calendarDate}>
               <Text style={styles.calendarDateMonth}>{event.month}</Text>
@@ -179,7 +195,13 @@ export function SharedScreen() {
               <Text style={styles.feedMeta}>{event.detail}</Text>
             </View>
           </View>
-        ))}
+        )) : (
+          <View style={styles.emptyCard}>
+            <Text style={styles.feedMeta}>
+              Your shared calendar is empty right now. Trips, rituals, and visits will appear here once you create them.
+            </Text>
+          </View>
+        )}
       </SectionCard>
     </ScreenSurface>
   );
@@ -413,6 +435,13 @@ const styles = StyleSheet.create({
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+  },
+  emptyCard: {
+    backgroundColor: "#FFF8F2",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: palette.line,
+    padding: 14,
   },
   calendarRow: {
     flexDirection: "row",

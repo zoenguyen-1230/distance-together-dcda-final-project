@@ -37,6 +37,15 @@ export interface Connection {
   accountStatus: string;
 }
 
+export interface CurrentUserProfile {
+  displayName: string;
+  location: string;
+  timezone: string;
+  relationshipFocus: string;
+  note: string;
+  linkedSocials: SocialPlatform[];
+}
+
 export interface Message {
   id: string;
   from: string;
