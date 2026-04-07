@@ -7,7 +7,7 @@ import React, {
   useState,
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { hasSupabaseCredentials } from "../config/env";
+import { env, hasSupabaseCredentials } from "../config/env";
 import { supabase } from "../lib/supabase";
 
 type PreviewMode = "filled" | "blank" | null;
@@ -49,13 +49,21 @@ function readPreviewMode(): PreviewMode {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [previewMode, setPreviewMode] = useState<PreviewMode>(() => readPreviewMode());
+  const forcedPreviewMode = env.previewBuildMode;
+  const [previewMode, setPreviewMode] = useState<PreviewMode>(
+    () => forcedPreviewMode ?? readPreviewMode()
+  );
   const [initialized, setInitialized] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [demoUserEmail, setDemoUserEmail] = useState<string | null>(null);
   const [demoDisplayName, setDemoDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
+    if (forcedPreviewMode) {
+      setPreviewMode(forcedPreviewMode);
+      return undefined;
+    }
+
     if (typeof window === "undefined") {
       return undefined;
     }
@@ -71,14 +79,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("popstate", syncPreviewMode);
       window.removeEventListener("hashchange", syncPreviewMode);
     };
-  }, []);
+  }, [forcedPreviewMode]);
+
+  const activePreviewMode = forcedPreviewMode ?? previewMode;
 
   useEffect(() => {
-    if (previewMode) {
+    if (activePreviewMode) {
       startTransition(() => {
         setSession(null);
-        setDemoUserEmail(`${previewMode}-preview@distance-together.demo`);
-        setDemoDisplayName(previewMode === "filled" ? "Full Demo" : "Blank Demo");
+        setDemoUserEmail(`${activePreviewMode}-preview@distance-together.demo`);
+        setDemoDisplayName(activePreviewMode === "filled" ? "Full Demo" : "Blank Demo");
         setInitialized(true);
       });
       return;
@@ -122,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isActive = false;
       data.subscription.unsubscribe();
     };
-  }, [previewMode]);
+  }, [activePreviewMode]);
 
   const signIn = async (email: string, password: string): Promise<AuthResult> => {
     if (!hasSupabaseCredentials) {
@@ -176,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (typeof window !== "undefined") {
+    if (!forcedPreviewMode && typeof window !== "undefined") {
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.delete("preview");
       nextUrl.hash = "";
@@ -196,8 +206,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return {
       initialized,
-      isDemoMode: previewMode === "filled" || !hasSupabaseCredentials,
-      previewMode,
+      isDemoMode: activePreviewMode === "filled" || (!hasSupabaseCredentials && !activePreviewMode),
+      previewMode: activePreviewMode,
       session,
       user,
       userEmail: user?.email ?? demoUserEmail,
@@ -206,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signUp,
       signOut,
     };
-  }, [demoDisplayName, demoUserEmail, initialized, previewMode, session]);
+  }, [activePreviewMode, demoDisplayName, demoUserEmail, initialized, session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
