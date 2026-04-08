@@ -55,7 +55,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       setInitialized(false);
 
       try {
-        const storageKey = `distance-together-profile:${userEmail}`;
+        const storageKey = `same-time-profile:${userEmail}`;
         const savedValue = await AsyncStorage.getItem(storageKey);
         const defaultProfile = buildDefaultProfile(userEmail, displayName);
 
@@ -104,7 +104,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }
 
     await AsyncStorage.setItem(
-      `distance-together-profile:${userEmail}`,
+      `same-time-profile:${userEmail}`,
       JSON.stringify(nextProfile)
     );
   };

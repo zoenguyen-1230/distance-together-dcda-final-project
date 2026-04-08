@@ -5,8 +5,8 @@ import { palette } from "../../theme/palette";
 export function LoadingScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>Distance Together</Text>
-      <Text style={styles.title}>Setting up your shared space...</Text>
+      <Text style={styles.eyebrow}>Same Time</Text>
+      <Text style={styles.title}>Setting up your next same-time moment...</Text>
       <ActivityIndicator size="large" color={palette.berry} />
     </View>
   );

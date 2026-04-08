@@ -96,7 +96,7 @@ npm run publish:draft
 
 Stable draft URL:
 
-- `https://distance-together-web-draft--draft.expo.app`
+- `https://same-time-web-draft--draft.expo.app`
 
 ## Editing the Same Area
 

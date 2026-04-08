@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (activePreviewMode) {
       startTransition(() => {
         setSession(null);
-        setDemoUserEmail(`${activePreviewMode}-preview@distance-together.demo`);
+        setDemoUserEmail(`${activePreviewMode}-preview@same-time.demo`);
         setDemoDisplayName(activePreviewMode === "filled" ? "Full Demo" : "Blank Demo");
         setInitialized(true);
       });

@@ -1,6 +1,12 @@
-# Distance Together
+# Same Time
 
-`Distance Together` is a mobile app concept for people in long-distance relationships of every kind: romantic partners, close friends, siblings, parents, and chosen family. The core idea is that connection is not only about messaging. It also comes from ritual, emotional visibility, shared memory, and planning future time together.
+`Same Time` is a mobile app concept for long-distance relationships across the full spectrum: romantic partners, close friends, siblings, parents, and chosen family. The name comes from the feeling behind “same time next week?”:
+
+- distance does not have to end the ritual
+- life can still be shared, updated, and planned together
+- connection can stay active through memory, routine, anticipation, and care
+
+The core idea is that staying close is not only about messaging. It also comes from ritual, emotional visibility, shared memory, and planning future time together.
 
 This starter repo now gives you a structured Expo + React Native foundation with:
 
@@ -127,7 +133,7 @@ This repo now includes:
 
 The current shareable draft URL is:
 
-- `https://distance-together-web-draft--draft.expo.app`
+- `https://same-time-web-draft--draft.expo.app`
 
 To publish updates to that same draft URL:
 
@@ -146,9 +152,7 @@ Expo Hosting uses immutable deployments plus aliases. The `draft` alias will alw
 
 ## GitHub
 
-This repo is now connected to GitHub:
-
-- `https://github.com/zoenguyen-1230/distance-together-dcda-final-project`
+This repo is currently connected to GitHub. If you rename the repository to match the product brand, update this section and the local `origin` remote to the new URL.
 
 The recommended collaboration workflow is:
 
@@ -181,6 +185,6 @@ The best next move is to choose one of these directions:
 1. Turn this into a real multi-screen app with Expo Router or React Navigation.
 2. Add Firebase or Supabase for real auth, storage, and syncing.
 3. Design the real data model and API contracts before backend implementation.
-4. Refine the visual identity and brand voice around warmth, intimacy, and intentional connection.
+4. Refine the visual identity and brand voice around `Same Time`: warmth, continuity, and “same time next week?” energy.
 
 If you want, I can take the next pass and turn this into a production-minded starter with real navigation, reusable components, and a backend setup.

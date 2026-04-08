@@ -80,11 +80,11 @@ export function AuthScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.hero}
         >
-          <Text style={styles.eyebrow}>Distance Together</Text>
-          <Text style={styles.heroTitle}>Feel close, even from far away.</Text>
+          <Text style={styles.eyebrow}>Same Time</Text>
+          <Text style={styles.heroTitle}>So same time next week?</Text>
           <Text style={styles.heroBody}>
-            Shared routines, emotional presence, memory keeping, and thoughtful
-            planning for the people you love.
+            Shared routines, life updates, memory keeping, and thoughtful planning
+            for the people you love, no matter the kind of relationship.
           </Text>
           <View style={styles.chipWrap}>
             {["Chat", "Shared journal", "Time capsule", "Visit countdown"].map(

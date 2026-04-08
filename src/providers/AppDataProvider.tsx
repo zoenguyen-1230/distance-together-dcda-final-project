@@ -93,11 +93,11 @@ const AppDataContext = createContext<AppDataContextValue | undefined>(undefined)
 
 function getStorageKey(userEmail: string | null, previewMode: "filled" | "blank" | null) {
   if (previewMode) {
-    return `distance-together-preview-data:${previewMode}`;
+    return `same-time-preview-data:${previewMode}`;
   }
 
   if (userEmail) {
-    return `distance-together-app-data:${userEmail}`;
+    return `same-time-app-data:${userEmail}`;
   }
 
   return null;
