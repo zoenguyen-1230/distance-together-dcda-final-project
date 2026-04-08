@@ -328,7 +328,9 @@ export function ConnectionsScreen() {
         relationshipType: inviteRelationshipType,
         note: inviteNote,
       });
-      setInviteFeedback(`Invite sent to ${inviteEmail.trim().toLowerCase()}.`);
+      setInviteFeedback(
+        `Invite saved for ${inviteEmail.trim().toLowerCase()}. They can accept it from the People tab after signing in.`
+      );
       setInviteName("");
       setInviteEmail("");
       setInviteNote("");

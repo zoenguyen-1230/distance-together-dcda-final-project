@@ -109,7 +109,7 @@ export async function fetchIncomingInvites(userEmail: string): Promise<Relations
     .select(
       "id, sender_id, recipient_email, recipient_name, relationship_type, note, status, created_at, sender:profiles!relationship_invites_sender_id_fkey(full_name)"
     )
-    .eq("recipient_email", userEmail)
+    .eq("recipient_email", userEmail.trim().toLowerCase())
     .order("created_at", { ascending: false });
 
   if (error) {
