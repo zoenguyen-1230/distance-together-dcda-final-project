@@ -182,13 +182,11 @@ When you want a custom domain later:
 
 Expo notes that custom domains are tied to the production deployment and are a paid-plan feature.
 
-## Recommended Next Step
+## Next Steps
 
-The best next move is to choose one of these directions:
+From here, `Same Time` can grow in a few directions:
 
-1. Turn this into a real multi-screen app with Expo Router or React Navigation.
-2. Add Firebase or Supabase for real auth, storage, and syncing.
-3. Design the real data model and API contracts before backend implementation.
-4. Refine the visual identity and brand voice around `Same Time`: warmth, continuity, and “same time next week?” energy.
-
-If you want, I can take the next pass and turn this into a production-minded starter with real navigation, reusable components, and a backend setup.
+1. Real auth and syncing with Supabase.
+2. Shared relationship spaces with invites and permissions.
+3. Persistent chats, journals, trips, and time capsules.
+4. A more defined visual identity built around warmth, continuity, and “same time next week?”
