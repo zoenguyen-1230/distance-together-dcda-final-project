@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 export function MetricCard({
   label,
@@ -34,10 +35,14 @@ const styles = StyleSheet.create({
     color: palette.muted,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+    letterSpacing: 0.2,
   },
   value: {
     color: palette.text,
     fontSize: 22,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.3,
   },
 });

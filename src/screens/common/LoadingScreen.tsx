@@ -1,6 +1,7 @@
 import React from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 export function LoadingScreen() {
   return (
@@ -27,6 +28,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1,
     textTransform: "uppercase",
+    fontFamily: typography.sansFamilyMedium,
   },
   title: {
     color: palette.text,
@@ -34,5 +36,7 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: "800",
     textAlign: "center",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.5,
   },
 });

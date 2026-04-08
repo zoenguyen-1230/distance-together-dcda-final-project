@@ -6,6 +6,7 @@ import {
   weekdayLabels,
 } from "../../lib/dateHelpers";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 interface CalendarRangePickerProps {
   title: string;
@@ -162,6 +163,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   calendarMonthButton: {
     borderRadius: 999,
@@ -175,8 +178,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 11,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   calendarWeekHeader: {
     flexDirection: "row",
@@ -199,6 +202,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    fontFamily: typography.sansFamilyMedium,
   },
   calendarDay: {
     width: "100%",
@@ -226,6 +230,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   calendarDayTextBlank: {
     color: "transparent",
@@ -246,11 +251,14 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+    letterSpacing: 0.2,
   },
   feedMeta: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   helperMeta: {
     color: palette.berry,
@@ -258,6 +266,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 18,
     flex: 1,
+    fontFamily: typography.sansFamily,
   },
   secondaryAction: {
     borderRadius: 18,
@@ -272,11 +281,13 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 15,
     fontWeight: "700",
-    textTransform: "uppercase",
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   selectChevron: {
     color: palette.muted,
     fontSize: 12,
     fontWeight: "800",
+    fontFamily: typography.sansFamilyMedium,
   },
 });

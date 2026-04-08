@@ -19,6 +19,7 @@ import {
 import { useAppData } from "../../providers/AppDataProvider";
 import { BudgetItem, FlightLeg, VisitPlan } from "../../types";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 const budgetCategories = [
   "Food",
@@ -986,6 +987,7 @@ export function TripsScreen() {
       <SectionCard
         title="Trip editor"
         subtitle="Add or update visits together so countdowns, packing, itinerary, and budget stay aligned"
+        variant="travel"
       >
         <View style={styles.controlGroup}>
           <Text style={styles.controlLabel}>Choose a trip to edit</Text>
@@ -1095,13 +1097,17 @@ export function TripsScreen() {
         </View>
       </SectionCard>
 
-      <SectionCard title="Next visit countdown" subtitle="Make time together feel tangible">
+      <SectionCard
+        title="Next visit countdown"
+        subtitle="Make time together feel tangible"
+        variant="travel"
+      >
         {orderedActiveTrips.length ? (
           orderedActiveTrips.map((visit) => (
             <View key={visit.id} style={styles.visitCard}>
               <View style={styles.visitBadge}>
                 <Text style={styles.visitNumber}>{visit.daysAway}</Text>
-                <Text style={styles.visitBadgeLabel}>days</Text>
+                <Text style={styles.visitBadgeLabel}>Days</Text>
               </View>
               <View style={styles.visitCopy}>
                 <Text style={styles.feedTitle}>{visit.title}</Text>
@@ -1117,7 +1123,7 @@ export function TripsScreen() {
           <View style={styles.emptyState}>
             <Text style={styles.feedTitle}>No trips yet</Text>
             <Text style={styles.feedMeta}>
-              Start with the trip editor above and your countdowns will show up here.
+              Start with a definite plan, or even a maybe worth holding onto.
             </Text>
           </View>
         )}
@@ -1127,6 +1133,7 @@ export function TripsScreen() {
         <SectionCard
           title="Archived trips"
           subtitle="Past or finished trips stay here so you can reopen them without losing the planning details"
+          variant="travel"
         >
           {archivedTrips.map((trip) => (
             <View key={trip.id} style={styles.closedSummaryCard}>
@@ -1146,7 +1153,11 @@ export function TripsScreen() {
         </SectionCard>
       ) : null}
 
-      <SectionCard title="Visit itinerary" subtitle="Plan the next trip together so time feels intentional before you even arrive">
+      <SectionCard
+        title="Visit itinerary"
+        subtitle="Plan the next trip together so time feels intentional before you even arrive"
+        variant="travel"
+      >
         {orderedActiveTrips.length ? (
           <>
             <View style={styles.controlGroup}>
@@ -1206,7 +1217,7 @@ export function TripsScreen() {
 
             {!visibleItinerary.length ? (
               <View style={styles.emptyState}>
-                <Text style={styles.feedMeta}>No itinerary items yet for this trip. Add the first plan above so you can build it together.</Text>
+                <Text style={styles.feedMeta}>Nothing is mapped out yet. Add one small anchor and let the rest grow around it.</Text>
               </View>
             ) : null}
           </>
@@ -1214,20 +1225,24 @@ export function TripsScreen() {
           <View style={styles.emptyState}>
             <Text style={styles.feedTitle}>No itinerary yet</Text>
             <Text style={styles.feedMeta}>
-              Create your first trip before adding shared plans and stops.
+              Add a trip first, then start sketching the shape of time together.
             </Text>
           </View>
         )}
       </SectionCard>
 
-      <SectionCard title="Trip toolkit" subtitle="Flights, weather, packing, and budgeting in one shared planning space">
+      <SectionCard
+        title="Trip toolkit"
+        subtitle="Flights, weather, packing, and budgeting in one shared planning space"
+        variant="travel"
+      >
         {tripToolkit.map((item) => (
-          <View key={item.id} style={styles.toolCard}>
-            <View style={styles.toolBadge}>
-              <Text style={styles.toolBadgeLabel}>{item.title}</Text>
+          <View key={item.id} style={styles.toolIntroCard}>
+            <View style={styles.toolIntroBadge}>
+              <Text style={styles.toolIntroBadgeLabel}>{item.title}</Text>
             </View>
-            <View style={styles.toolCopy}>
-              <Text style={styles.feedMeta}>{item.detail}</Text>
+            <View style={styles.toolIntroCopy}>
+              <Text style={styles.toolIntroDetail}>{item.detail}</Text>
             </View>
           </View>
         ))}
@@ -1310,7 +1325,7 @@ export function TripsScreen() {
                           {typeof item.price === "number" ? `$${item.price}` : "Dates"}
                         </Text>
                         <Text style={styles.summaryLabel}>
-                          {typeof item.price === "number" ? "est. fare" : "window"}
+                          {typeof item.price === "number" ? "Est. fare" : "Window"}
                         </Text>
                       </View>
                       <View style={styles.toolCopy}>
@@ -1331,7 +1346,7 @@ export function TripsScreen() {
               {!visibleFlightWindows.length ? (
                 <View style={styles.emptyState}>
                   <Text style={styles.feedMeta}>
-                    No flight windows yet for this trip. Add one above to compare cheaper date options.
+                    No fare windows saved yet. Start with dates first, then compare what feels lighter.
                   </Text>
                 </View>
               ) : null}
@@ -1339,7 +1354,7 @@ export function TripsScreen() {
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.feedMeta}>
-                Add a trip first, then you can track cheaper flight windows for that city.
+                Add a place first, and flexible flight windows can gather here around it.
               </Text>
             </View>
           )}
@@ -1482,7 +1497,7 @@ export function TripsScreen() {
                           <View style={styles.summaryHeader}>
                             <View style={styles.summaryBadge}>
                               <Text style={styles.summaryValue}>{index + 1}</Text>
-                              <Text style={styles.summaryLabel}>leg</Text>
+                              <Text style={styles.summaryLabel}>Leg</Text>
                             </View>
                             <View style={styles.toolCopy}>
                               <Text style={styles.feedTitle}>{leg.flightCode}</Text>
@@ -1516,7 +1531,7 @@ export function TripsScreen() {
                         {item.direction === "arrival" ? "IN" : "OUT"}
                       </Text>
                       <Text style={styles.summaryLabel}>
-                        {item.direction === "arrival" ? "arrival" : "departure"}
+                        {item.direction === "arrival" ? "Arrival" : "Departure"}
                       </Text>
                     </View>
                     <View style={styles.toolCopy}>
@@ -1544,7 +1559,7 @@ export function TripsScreen() {
               {!visibleTrackedFlights.length ? (
                 <View style={styles.emptyState}>
                   <Text style={styles.feedMeta}>
-                    No arrival or departure flights tracked yet for this trip. Add one above so you can plan pickups and goodbyes together.
+                    No arrivals or departures saved yet. Add one so pickups, hellos, and goodbyes feel easier to hold.
                   </Text>
                 </View>
               ) : null}
@@ -1552,7 +1567,7 @@ export function TripsScreen() {
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.feedMeta}>
-                Add a trip first, then you can track arrivals and departures for the people in it.
+                Add a trip first, then the coming-and-going details can live here.
               </Text>
             </View>
           )}
@@ -1582,7 +1597,7 @@ export function TripsScreen() {
                   <Text style={styles.weatherTemperature}>
                     {getTemperatureDisplay(forecast.temperatureRange, temperatureUnit)}
                   </Text>
-                  <Text style={styles.summaryLabel}>forecast</Text>
+                  <Text style={styles.summaryLabel}>Forecast</Text>
                 </View>
                 <View style={styles.toolCopy}>
                   <Text style={styles.feedTitle}>{forecast.city}</Text>
@@ -1595,7 +1610,7 @@ export function TripsScreen() {
           {!visibleWeatherForecasts.length ? (
             <View style={styles.emptyState}>
               <Text style={styles.feedMeta}>
-                Add a trip and its city first, then weather guidance will appear here.
+                Add a destination, and the forecast will meet you there.
               </Text>
             </View>
           ) : null}
@@ -1657,14 +1672,14 @@ export function TripsScreen() {
 
               {!visiblePackingItems.length ? (
                 <View style={styles.emptyState}>
-                  <Text style={styles.feedMeta}>No packing items yet for this trip. Add a few essentials to start the checklist.</Text>
+                  <Text style={styles.feedMeta}>Nothing packed yet. Start with one thing you would hate to forget.</Text>
                 </View>
               ) : null}
             </>
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.feedMeta}>
-                Add a trip first, then you can build a packing list for it here.
+                Add a trip first, then start building the little list that makes leaving feel easier.
               </Text>
             </View>
           )}
@@ -1808,7 +1823,7 @@ export function TripsScreen() {
 
                   {!visibleBudgetItems.length ? (
                     <View style={styles.emptyState}>
-                      <Text style={styles.feedMeta}>No expenses recorded yet for this trip. Add the first one to start the budget.</Text>
+                      <Text style={styles.feedMeta}>No shared costs yet. Add the first one so the trip feels lighter to carry together.</Text>
                     </View>
                   ) : null}
 
@@ -1838,7 +1853,7 @@ export function TripsScreen() {
           ) : (
             <View style={styles.emptyState}>
               <Text style={styles.feedMeta}>
-                Add a trip first, then you can track its shared costs and close the budget when done.
+                Add a trip first, then the budget can slowly fill in around the plans.
               </Text>
             </View>
           )}
@@ -1892,13 +1907,15 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: "900",
     lineHeight: 36,
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.6,
   },
   visitBadgeLabel: {
     color: palette.berry,
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.8,
-    textTransform: "uppercase",
+    fontFamily: typography.sansFamilyMedium,
   },
   visitCopy: {
     flex: 1,
@@ -1934,14 +1951,57 @@ const styles = StyleSheet.create({
     color: palette.berry,
     fontSize: 11,
     fontWeight: "700",
-    textTransform: "uppercase",
     textAlign: "center",
     letterSpacing: 0.6,
+    fontFamily: typography.sansFamilyMedium,
   },
   toolCopy: {
     flex: 1,
     gap: 4,
     paddingTop: 1,
+  },
+  toolIntroCard: {
+    flexDirection: "row",
+    gap: 18,
+    alignItems: "center",
+    backgroundColor: "#FFF8F2",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: palette.line,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  toolIntroBadge: {
+    minWidth: 152,
+    minHeight: 68,
+    borderRadius: 22,
+    backgroundColor: "#FFF1E7",
+    borderWidth: 1,
+    borderColor: "#F4E6DF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  toolIntroBadgeLabel: {
+    color: palette.berry,
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center",
+    letterSpacing: 0.4,
+    lineHeight: 15,
+    fontFamily: typography.sansFamilyMedium,
+  },
+  toolIntroCopy: {
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 68,
+  },
+  toolIntroDetail: {
+    color: palette.muted,
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   controlGroup: {
     gap: 8,
@@ -1950,6 +2010,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+    letterSpacing: 0.2,
   },
   editorCard: {
     gap: 12,
@@ -1966,6 +2028,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   requiredMark: {
     color: palette.berry,
@@ -2015,6 +2078,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   calendarMonthButton: {
     borderRadius: 999,
@@ -2028,8 +2093,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 11,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   calendarWeekHeader: {
     flexDirection: "row",
@@ -2043,6 +2108,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    fontFamily: typography.sansFamilyMedium,
   },
   calendarGrid: {
     flexDirection: "row",
@@ -2075,6 +2141,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   calendarDayTextBlank: {
     color: "transparent",
@@ -2100,6 +2167,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: palette.text,
     fontSize: 14,
+    fontFamily: typography.sansFamily,
   },
   detailInput: {
     minHeight: 88,
@@ -2109,6 +2177,8 @@ const styles = StyleSheet.create({
     color: palette.berry,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+    lineHeight: 18,
   },
   rowMeta: {
     flexDirection: "row",
@@ -2121,8 +2191,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 12,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   emptyState: {
     backgroundColor: "#FFF8F2",
@@ -2139,6 +2209,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 16,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   checkEditorRow: {
     flexDirection: "row",
@@ -2171,6 +2243,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "800",
+    fontFamily: typography.sansFamilyMedium,
   },
   totalCard: {
     backgroundColor: palette.softSun,
@@ -2184,11 +2257,14 @@ const styles = StyleSheet.create({
     color: palette.muted,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   totalValue: {
     color: palette.text,
     fontSize: 28,
     fontWeight: "900",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.5,
   },
   closedSummaryCard: {
     gap: 10,
@@ -2253,6 +2329,8 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     textAlign: "center",
     lineHeight: 28,
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.4,
   },
   weatherTemperature: {
     color: palette.text,
@@ -2260,13 +2338,15 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     textAlign: "center",
     lineHeight: 21,
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   summaryLabel: {
     color: palette.berry,
     fontSize: 11,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   budgetRow: {
     flexDirection: "row",
@@ -2322,6 +2402,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     flex: 1,
+    fontFamily: typography.sansFamily,
   },
   selectPlaceholder: {
     color: "#A08F89",
@@ -2330,6 +2411,7 @@ const styles = StyleSheet.create({
     color: palette.berry,
     fontSize: 12,
     fontWeight: "800",
+    fontFamily: typography.sansFamilyMedium,
   },
   optionList: {
     borderRadius: 18,
@@ -2348,6 +2430,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "600",
+    fontFamily: typography.sansFamilyMedium,
   },
   suggestionList: {
     borderRadius: 18,
@@ -2370,13 +2453,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     flex: 1,
+    fontFamily: typography.sansFamilyMedium,
   },
   suggestionMeta: {
     color: palette.berry,
     fontSize: 12,
     fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   removeButton: {
     alignSelf: "flex-end",
@@ -2391,8 +2475,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 12,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   secondaryAction: {
     alignSelf: "flex-start",
@@ -2406,24 +2490,27 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 12,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   addBudgetText: {
     color: palette.berry,
     fontSize: 13,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   feedTitle: {
     color: palette.text,
     fontSize: 17,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   feedMeta: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
 });

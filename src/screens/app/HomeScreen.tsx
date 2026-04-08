@@ -1,16 +1,17 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MetricCard } from "../../components/ui/MetricCard";
 import { MultiSelectDropdown } from "../../components/ui/MultiSelectDropdown";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
-import { moodUpdates, nextVisit, promptDeck } from "../../data/mockData";
+import { moodUpdates, promptDeck } from "../../data/mockData";
 import { getMonthNames, parseDateValue } from "../../lib/dateHelpers";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppData } from "../../providers/AppDataProvider";
 import { useProfile } from "../../providers/ProfileProvider";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 const moodOptions = ["hopeful", "busy", "calm", "excited"];
 const energyOptions = ["low", "steady", "high"];
@@ -85,13 +86,53 @@ function getJournalStreak(entryDates: string[]) {
   return streak;
 }
 
+function getDaysAway(dateValue: string) {
+  const tripDate = new Date(`${dateValue}T12:00:00`);
+  const today = new Date();
+  const startOfToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    12,
+    0,
+    0
+  );
+
+  return Math.max(
+    0,
+    Math.ceil((tripDate.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24))
+  );
+}
+
+function formatParticipantLine(names: string[]) {
+  if (!names.length) {
+    return "";
+  }
+
+  if (names.length === 1) {
+    return ` with ${names[0]}`;
+  }
+
+  if (names.length === 2) {
+    return ` with ${names[0]} and ${names[1]}`;
+  }
+
+  return ` with ${names[0]} and ${names.length - 1} others`;
+}
+
 export function HomeScreen() {
   const { displayName, userEmail, isDemoMode, previewMode } = useAuth();
   const { profile } = useProfile();
-  const { connections, journalEntries, timeCapsules, checkInPrompts, setCheckInPrompts } = useAppData();
+  const {
+    connections,
+    visitPlans,
+    journalEntries,
+    timeCapsules,
+    checkInPrompts,
+    setCheckInPrompts,
+  } = useAppData();
   const liveConnections = connections;
   const liveMoodUpdates = isDemoMode ? moodUpdates : [];
-  const liveNextVisit = isDemoMode ? nextVisit : null;
   const [selectedPrompt, setSelectedPrompt] = useState(promptDeck[0]);
   const [myMood, setMyMood] = useState("calm");
   const [myEnergy, setMyEnergy] = useState("steady");
@@ -111,6 +152,40 @@ export function HomeScreen() {
   const [statusSent, setStatusSent] = useState(false);
   const [promptSent, setPromptSent] = useState(false);
   const [promptReplyDrafts, setPromptReplyDrafts] = useState<Record<string, string>>({});
+
+  const upcomingTrip = useMemo(() => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    return [...visitPlans]
+      .filter((trip) => !trip.archived)
+      .map((trip) => {
+        const parsedDate = parseDateValue(trip.startDate);
+
+        return parsedDate ? { trip, parsedDate } : null;
+      })
+      .filter(
+        (
+          value
+        ): value is {
+          trip: (typeof visitPlans)[number];
+          parsedDate: Date;
+        } => Boolean(value && value.parsedDate >= startOfToday)
+      )
+      .sort((left, right) => left.parsedDate.getTime() - right.parsedDate.getTime())[0];
+  }, [visitPlans]);
+
+  const upcomingTripNames = useMemo(() => {
+    if (!upcomingTrip) {
+      return [];
+    }
+
+    return upcomingTrip.trip.participantIds
+      .map((participantId) =>
+        liveConnections.find((connection) => connection.id === participantId)?.name ?? ""
+      )
+      .filter(Boolean);
+  }, [liveConnections, upcomingTrip]);
 
   const toggleAudience = (connectionId: string) => {
     setSelectedAudience((current) =>
@@ -171,8 +246,12 @@ export function HomeScreen() {
     );
   };
 
-  const bannerBody = liveNextVisit
-    ? `${liveNextVisit.daysAway} days until your next time together in ${liveNextVisit.location}.`
+  const bannerBody = upcomingTrip
+    ? `${getDaysAway(upcomingTrip.trip.startDate)} more day${
+        getDaysAway(upcomingTrip.trip.startDate) === 1 ? "" : "s"
+      } until your next time together${formatParticipantLine(upcomingTripNames)} in ${
+        upcomingTrip.trip.location
+      }.`
     : liveConnections.length === 1
       ? `You have 1 person in your circle. Start a chat, share a live update, or plan your next memory together.`
       : liveConnections.length > 1
@@ -190,6 +269,11 @@ export function HomeScreen() {
         end={{ x: 1, y: 1 }}
         style={styles.banner}
       >
+        <View style={styles.bannerAccent} pointerEvents="none">
+          <View style={styles.bannerAccentDotLarge} />
+          <View style={styles.bannerAccentLine} />
+          <View style={styles.bannerAccentDotSmall} />
+        </View>
         <Text style={styles.bannerEyebrow}>
           {previewMode === "filled"
             ? "Preview: Full demo"
@@ -505,6 +589,34 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: 22,
     gap: 8,
+    overflow: "hidden",
+  },
+  bannerAccent: {
+    position: "absolute",
+    top: 18,
+    right: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    opacity: 0.75,
+  },
+  bannerAccentDotLarge: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: palette.berry,
+  },
+  bannerAccentLine: {
+    width: 20,
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: "#E8BBC8",
+  },
+  bannerAccentDotSmall: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "#E8BBC8",
   },
   bannerEyebrow: {
     color: palette.berry,
@@ -512,16 +624,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.6,
     textTransform: "uppercase",
+    fontFamily: typography.sansFamilyMedium,
   },
   bannerTitle: {
     color: palette.text,
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.6,
   },
   bannerBody: {
     color: palette.muted,
     fontSize: 16,
     lineHeight: 24,
+    fontFamily: typography.sansFamily,
   },
   metricRow: {
     flexDirection: "row",
@@ -542,12 +658,16 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+    letterSpacing: 0.2,
   },
   promptText: {
     color: palette.text,
     fontSize: 18,
     lineHeight: 28,
     fontWeight: "700",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   selectWrap: {
     gap: 6,
@@ -570,12 +690,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
     textTransform: "capitalize",
+    fontFamily: typography.sansFamily,
   },
   promptSelectText: {
     color: palette.text,
     fontSize: 14,
     flex: 1,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   selectChevron: {
     color: palette.berry,
@@ -600,12 +722,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textTransform: "capitalize",
+    fontFamily: typography.sansFamilyMedium,
   },
   promptOptionText: {
     color: palette.text,
     fontSize: 14,
     fontWeight: "600",
     lineHeight: 20,
+    fontFamily: typography.sansFamilyMedium,
   },
   primaryButton: {
     backgroundColor: palette.text,
@@ -618,6 +742,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   sentCard: {
     backgroundColor: palette.mint,
@@ -656,6 +781,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 16,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
   },
   feedCopy: {
     flex: 1,
@@ -665,11 +791,14 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 17,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   feedMeta: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   feedSubtle: {
     color: palette.berry,
@@ -677,6 +806,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.6,
+    fontFamily: typography.sansFamilyMedium,
   },
   textInput: {
     borderRadius: 18,
@@ -687,6 +817,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: palette.text,
     fontSize: 14,
+    fontFamily: typography.sansFamily,
   },
   replyInput: {
     minHeight: 88,
@@ -715,5 +846,6 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
 });

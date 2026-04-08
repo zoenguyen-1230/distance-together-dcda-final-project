@@ -1,6 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { composerActions } from "../../data/mockData";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
@@ -8,6 +15,7 @@ import { pickImageFromDevice } from "../../lib/pickImageFromDevice";
 import { useAppData } from "../../providers/AppDataProvider";
 import { useProfile } from "../../providers/ProfileProvider";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 const reactionOptions = ["❤️", "👍", "😢", "✨", "😂", "🔥", "🥹", "🙌"];
 const photoPreviewWebStyle = {
@@ -39,6 +47,10 @@ function buildTimeStamp() {
   return `${normalizedHour}:${minutes} ${suffix}`;
 }
 
+function toTitleCase(value: string) {
+  return value.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 async function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -58,6 +70,7 @@ async function blobToDataUrl(blob: Blob): Promise<string> {
 export function ChatScreen() {
   const { connections, messages, setMessages } = useAppData();
   const { profile } = useProfile();
+  const { width } = useWindowDimensions();
   const [selectedConnectionId, setSelectedConnectionId] = useState(connections[0]?.id ?? "");
   const [draftMessage, setDraftMessage] = useState("");
   const [draftType, setDraftType] = useState<"Text" | "Photo" | "Voice memo" | "Video message">(
@@ -78,6 +91,7 @@ export function ChatScreen() {
   );
 
   const selectedConnection = connections.find((connection) => connection.id === selectedConnectionId);
+  const isWideLayout = width >= 1080;
 
   useEffect(() => {
     if (!selectedConnectionId && connections[0]?.id) {
@@ -241,9 +255,9 @@ export function ChatScreen() {
 
     if (draftType === "Photo") {
       return (
-        <View style={styles.mediaToolCard}>
+        <View style={styles.mediaToolCardCompact}>
           <Text style={styles.feedMeta}>Choose a photo from your device.</Text>
-          <View style={styles.actionRow}>
+          <View style={styles.actionRowCompact}>
             <TouchableOpacity style={styles.secondaryAction} onPress={() => void selectPhoto()}>
               <Text style={styles.secondaryActionText}>
                 {draftMediaUri ? "Replace photo" : "Upload photo"}
@@ -260,13 +274,13 @@ export function ChatScreen() {
     }
 
     return (
-      <View style={styles.mediaToolCard}>
+      <View style={styles.mediaToolCardCompact}>
         <Text style={styles.feedMeta}>
           {draftType === "Voice memo"
             ? "Record a short voice memo right in the browser."
             : "Record a video message right in the browser."}
         </Text>
-        <View style={styles.actionRow}>
+        <View style={styles.actionRowCompact}>
           {recordingState !== "recording" ? (
             <TouchableOpacity
               style={styles.secondaryAction}
@@ -343,134 +357,192 @@ export function ChatScreen() {
       >
         {connections.length ? (
           <>
-            <View style={styles.controlGroup}>
-              <Text style={styles.controlLabel}>Choose a conversation</Text>
-              <View style={styles.chipWrap}>
-                {connections.map((connection) => (
-                  <FilterChip
-                    key={connection.id}
-                    label={connection.name}
-                    active={selectedConnectionId === connection.id}
-                    onPress={() => setSelectedConnectionId(connection.id)}
-                  />
-                ))}
-              </View>
-            </View>
-
-            {selectedConnection ? (
-              <View style={styles.threadHeader}>
-                <Text style={styles.feedTitle}>{selectedConnection.name}</Text>
-                <Text style={styles.feedMeta}>
-                  {selectedConnection.relationshipType} | {selectedConnection.location}
-                </Text>
-              </View>
-            ) : null}
-
-            {liveMessages.length ? (
-              liveMessages.map((message) => (
-                <View
-                  key={message.id}
-                  style={[
-                    styles.messageBubble,
-                    message.author === "self" ? styles.messageBubbleSelf : styles.messageBubbleOther,
-                  ]}
-                >
-                  <Text style={styles.messageMeta}>
-                    {message.author === "self"
-                      ? profile.displayName || "You"
-                      : selectedConnection?.name || "Your person"}{" "}
-                    | {message.type}
-                  </Text>
-                  {renderMessageMedia(message)}
-                  {message.body ? <Text style={styles.messageBody}>{message.body}</Text> : null}
-                  <Text style={styles.messageTime}>{message.sentAt}</Text>
-                  <View style={styles.reactionRow}>
-                    {(message.reactions ?? []).map((reaction) => (
-                      <View key={`${message.id}-${reaction}`} style={styles.reactionChip}>
-                        <Text style={styles.reactionChipText}>{reaction}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.reactionPicker}>
-                    {reactionOptions.map((reaction) => (
+            <View style={[styles.chatShell, isWideLayout && styles.chatShellWide]}>
+              <View style={[styles.selectorPane, isWideLayout && styles.selectorPaneWide]}>
+                <View style={styles.controlGroup}>
+                  <Text style={styles.controlLabel}>Choose a conversation</Text>
+                  <View style={styles.conversationGrid}>
+                    {connections.map((connection) => (
                       <TouchableOpacity
-                        key={`${message.id}-picker-${reaction}`}
+                        key={connection.id}
                         style={[
-                          styles.reactionOption,
-                          (message.reactions ?? []).includes(reaction) && styles.reactionOptionActive,
+                          styles.conversationCard,
+                          selectedConnectionId === connection.id && styles.conversationCardActive,
                         ]}
-                        onPress={() => addReaction(message.id, reaction)}
+                        onPress={() => setSelectedConnectionId(connection.id)}
+                        activeOpacity={0.9}
                       >
-                        <Text style={styles.reactionOptionText}>{reaction}</Text>
+                        {connection.photoUri ? (
+                          <Image
+                            source={{ uri: connection.photoUri }}
+                            style={styles.conversationAvatarImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.conversationAvatarFallback}>
+                            <Text style={styles.conversationAvatarInitial}>
+                              {connection.name[0]}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={styles.conversationCardCopy}>
+                          <Text style={styles.conversationCardTitle}>{connection.name}</Text>
+                          <Text style={styles.conversationCardMeta}>
+                            {toTitleCase(connection.relationshipType)} | {connection.location}
+                          </Text>
+                        </View>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
-              ))
-            ) : (
-              <View style={styles.emptyCard}>
-                <Text style={styles.messageBody}>
-                  No messages yet with {selectedConnection?.name || "this person"}. Send the first one below.
-                </Text>
               </View>
-            )}
+              <View style={[styles.threadPane, isWideLayout && styles.threadPaneWide]}>
+                {selectedConnection ? (
+                  <View style={styles.threadHeader}>
+                    <Text style={styles.feedTitle}>{selectedConnection.name}</Text>
+                    <Text style={styles.feedMeta}>
+                      {toTitleCase(selectedConnection.relationshipType)} | {selectedConnection.location}
+                    </Text>
+                  </View>
+                ) : null}
 
-            <View style={styles.composerCard}>
-              <Text style={styles.feedTitle}>Send a message</Text>
-              <View style={styles.chipWrap}>
-                {(["Text", "Photo", "Voice memo", "Video message"] as const).map((type) => (
-                  <FilterChip
-                    key={type}
-                    label={type}
-                    active={draftType === type}
-                    onPress={() => setDraftType(type)}
+                <View style={[styles.threadStream, isWideLayout && styles.threadStreamWide]}>
+                  {liveMessages.length ? (
+                    liveMessages.map((message) => (
+                      <View
+                        key={message.id}
+                        style={[
+                          styles.messageBubble,
+                          message.author === "self" ? styles.messageBubbleSelf : styles.messageBubbleOther,
+                        ]}
+                      >
+                        <Text style={styles.messageMeta}>
+                          {message.author === "self"
+                            ? profile.displayName || "You"
+                            : selectedConnection?.name || "Your person"}{" "}
+                          | {message.type}
+                        </Text>
+                        {renderMessageMedia(message)}
+                        {message.body ? <Text style={styles.messageBody}>{message.body}</Text> : null}
+                        <Text style={styles.messageTime}>{message.sentAt}</Text>
+                        <View style={styles.reactionRow}>
+                          {(message.reactions ?? []).map((reaction) => (
+                            <View key={`${message.id}-${reaction}`} style={styles.reactionChip}>
+                              <Text style={styles.reactionChipText}>{reaction}</Text>
+                            </View>
+                          ))}
+                        </View>
+                        <View style={styles.reactionPicker}>
+                          {reactionOptions.map((reaction) => (
+                            <TouchableOpacity
+                              key={`${message.id}-picker-${reaction}`}
+                              style={[
+                                styles.reactionOption,
+                                (message.reactions ?? []).includes(reaction) && styles.reactionOptionActive,
+                              ]}
+                              onPress={() => addReaction(message.id, reaction)}
+                            >
+                              <Text style={styles.reactionOptionText}>{reaction}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        <View
+                          style={[
+                            styles.messageTail,
+                            message.author === "self" ? styles.messageTailSelf : styles.messageTailOther,
+                          ]}
+                        />
+                      </View>
+                    ))
+                  ) : (
+                    <View style={styles.emptyCard}>
+                      <Text style={styles.messageBody}>
+                        Nothing in this thread yet with {selectedConnection?.name || "this person"}. The first message can be simple.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.composerCard, isWideLayout && styles.composerCardWide]}>
+                  <View style={[styles.composerTopRow, isWideLayout && styles.composerTopRowWide]}>
+                    <Text style={styles.composerHeading}>Send a message</Text>
+                    {selectedConnection ? (
+                      <Text style={styles.composerAudienceMeta}>to {selectedConnection.name}</Text>
+                    ) : null}
+                  </View>
+                  <View style={[styles.chipWrap, isWideLayout && styles.chipWrapWide]}>
+                    {(["Text", "Photo", "Voice memo", "Video message"] as const).map((type) => (
+                      <FilterChip
+                        key={type}
+                        label={type}
+                        active={draftType === type}
+                        onPress={() => setDraftType(type)}
+                      />
+                    ))}
+                  </View>
+                  {renderDraftMediaTools()}
+                  {renderDraftPreview()}
+                  <TextInput
+                    value={draftMessage}
+                    onChangeText={setDraftMessage}
+                    placeholder={
+                      draftType === "Text"
+                        ? "Type your message"
+                        : `Add a note for this ${draftType.toLowerCase()}`
+                    }
+                    placeholderTextColor="#A08F89"
+                    style={[styles.textInput, styles.detailInput, isWideLayout && styles.detailInputCompact]}
+                    multiline
                   />
-                ))}
+                  <TouchableOpacity
+                    style={[styles.primaryButton, isWideLayout && styles.primaryButtonCompact]}
+                    onPress={sendMessage}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      Send to {selectedConnection?.name || "your person"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              {renderDraftMediaTools()}
-              {renderDraftPreview()}
-              <TextInput
-                value={draftMessage}
-                onChangeText={setDraftMessage}
-                placeholder={
-                  draftType === "Text"
-                    ? "Type your message"
-                    : `Add a note for this ${draftType.toLowerCase()}`
-                }
-                placeholderTextColor="#A08F89"
-                style={[styles.textInput, styles.detailInput]}
-                multiline
-              />
-              <TouchableOpacity style={styles.primaryButton} onPress={sendMessage}>
-                <Text style={styles.primaryButtonText}>
-                  Send to {selectedConnection?.name || "your person"}
-                </Text>
-              </TouchableOpacity>
             </View>
           </>
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.messageBody}>
-              New accounts start with an empty thread. Add someone in `People` to begin your first chat.
+              New accounts start quietly. Add someone in `People`, and the first thread can begin here.
             </Text>
           </View>
         )}
       </SectionCard>
 
-      <SectionCard title="Composer shortcuts" subtitle="Prototype actions for the rich message tray">
-        <View style={styles.composerGrid}>
-          {composerActions.map((action) => (
-            <View key={action} style={styles.composerTile}>
-              <Text style={styles.composerTileText}>{action}</Text>
-            </View>
-          ))}
-        </View>
-      </SectionCard>
     </ScreenSurface>
   );
 }
 
 const styles = StyleSheet.create({
+  chatShell: {
+    gap: 18,
+  },
+  chatShellWide: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  selectorPane: {
+    gap: 12,
+  },
+  selectorPaneWide: {
+    width: 330,
+    flexShrink: 0,
+    position: "sticky" as any,
+    top: 24 as any,
+  },
+  threadPane: {
+    gap: 16,
+  },
+  threadPaneWide: {
+    flex: 1,
+    minWidth: 0,
+  },
   controlGroup: {
     gap: 8,
   },
@@ -478,39 +550,113 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   chipWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
+  chipWrapWide: {
+    gap: 6,
+  },
+  conversationGrid: {
+    gap: 10,
+  },
+  conversationCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: "#FFF8F2",
+    padding: 12,
+  },
+  conversationCardActive: {
+    backgroundColor: "#FFF1E7",
+    borderColor: "#E9B8A9",
+  },
+  conversationAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#EED8CB",
+    backgroundColor: "#F4E6DF",
+  },
+  conversationAvatarFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF1E7",
+    borderWidth: 1,
+    borderColor: "#EED8CB",
+  },
+  conversationAvatarInitial: {
+    color: palette.berry,
+    fontSize: 18,
+    fontFamily: typography.displayFamily,
+    fontWeight: "800",
+  },
+  conversationCardCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  conversationCardTitle: {
+    color: palette.text,
+    fontSize: 17,
+    fontFamily: typography.displayFamily,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
+  conversationCardMeta: {
+    color: palette.muted,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: typography.sansFamily,
+  },
   threadHeader: {
     gap: 4,
     paddingBottom: 4,
+  },
+  threadStream: {
+    gap: 12,
+  },
+  threadStreamWide: {
+    paddingBottom: 18,
   },
   feedTitle: {
     color: palette.text,
     fontSize: 17,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   feedMeta: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   helperMeta: {
     color: palette.berry,
     fontSize: 12,
     fontWeight: "600",
     lineHeight: 18,
+    fontFamily: typography.sansFamily,
   },
   errorText: {
     color: "#B5544B",
     fontSize: 12,
     fontWeight: "600",
     lineHeight: 18,
+    fontFamily: typography.sansFamily,
   },
   messageBubble: {
+    position: "relative",
     borderRadius: 22,
     padding: 16,
     maxWidth: "90%",
@@ -519,26 +665,47 @@ const styles = StyleSheet.create({
   messageBubbleSelf: {
     backgroundColor: "#FFE2D9",
     alignSelf: "flex-end",
+    borderBottomRightRadius: 12,
   },
   messageBubbleOther: {
     backgroundColor: "#F5EFEA",
     alignSelf: "flex-start",
+    borderBottomLeftRadius: 12,
+  },
+  messageTail: {
+    position: "absolute",
+    bottom: 10,
+    width: 18,
+    height: 18,
+    transform: [{ rotate: "45deg" }],
+    borderRadius: 4,
+  },
+  messageTailSelf: {
+    right: -6,
+    backgroundColor: "#FFE2D9",
+  },
+  messageTailOther: {
+    left: -6,
+    backgroundColor: "#F5EFEA",
   },
   messageMeta: {
     color: palette.berry,
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
+    fontFamily: typography.sansFamilyMedium,
   },
   messageBody: {
     color: palette.text,
     fontSize: 16,
     lineHeight: 24,
+    fontFamily: typography.sansFamily,
   },
   messageTime: {
     color: palette.muted,
     fontSize: 12,
     fontWeight: "600",
+    fontFamily: typography.sansFamily,
   },
   reactionRow: {
     flexDirection: "row",
@@ -584,6 +751,32 @@ const styles = StyleSheet.create({
     borderColor: palette.line,
     padding: 16,
   },
+  composerCardWide: {
+    gap: 8,
+    padding: 10,
+    position: "sticky" as any,
+    bottom: 16 as any,
+    zIndex: 5,
+  },
+  composerTopRow: {
+    gap: 4,
+  },
+  composerTopRowWide: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  composerHeading: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+  },
+  composerAudienceMeta: {
+    color: palette.muted,
+    fontSize: 12,
+    fontFamily: typography.sansFamily,
+  },
   mediaToolCard: {
     gap: 10,
     borderRadius: 18,
@@ -592,10 +785,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFCF8",
     padding: 12,
   },
+  mediaToolCardCompact: {
+    gap: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#EEDDD1",
+    backgroundColor: "#FFFCF8",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   actionRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
+    alignItems: "center",
+  },
+  actionRowCompact: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
   },
   textInput: {
@@ -607,10 +815,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: palette.text,
     fontSize: 14,
+    fontFamily: typography.sansFamily,
   },
   detailInput: {
     minHeight: 92,
     textAlignVertical: "top",
+  },
+  detailInputCompact: {
+    minHeight: 52,
+    paddingVertical: 10,
   },
   primaryButton: {
     borderRadius: 18,
@@ -619,17 +832,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
   },
+  primaryButtonCompact: {
+    paddingVertical: 10,
+  },
   primaryButtonText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   secondaryAction: {
     borderRadius: 18,
     borderWidth: 1,
     borderColor: palette.text,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     alignItems: "center",
     backgroundColor: "#FFFCFA",
   },
@@ -637,39 +854,21 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   clearButton: {
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "#E4D1C8",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: "#FFF6EF",
   },
   clearButtonText: {
     color: palette.berry,
     fontSize: 13,
     fontWeight: "700",
-  },
-  composerGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  composerTile: {
-    width: "48%",
-    minHeight: 90,
-    borderRadius: 22,
-    backgroundColor: "#FFF7F2",
-    borderWidth: 1,
-    borderColor: palette.line,
-    padding: 16,
-    justifyContent: "flex-end",
-  },
-  composerTileText: {
-    color: palette.text,
-    fontSize: 16,
-    fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   emptyCard: {
     borderRadius: 22,

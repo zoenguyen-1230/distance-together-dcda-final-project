@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { socialPlatforms } from "../../data/mockData";
 import { useAuth } from "../../providers/AuthProvider";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 
@@ -262,17 +263,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
+    fontFamily: typography.sansFamilyMedium,
   },
   heroTitle: {
     color: palette.text,
-    fontSize: 34,
-    lineHeight: 40,
+    fontSize: 38,
+    lineHeight: 44,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.8,
   },
   heroBody: {
     color: palette.muted,
     fontSize: 16,
     lineHeight: 24,
+    fontFamily: typography.sansFamily,
   },
   chipWrap: {
     flexDirection: "row",
@@ -288,6 +293,8 @@ const styles = StyleSheet.create({
   valueChipText: {
     color: palette.text,
     fontWeight: "600",
+    fontFamily: typography.sansFamilyMedium,
+    letterSpacing: 0.2,
   },
   card: {
     backgroundColor: palette.card,
@@ -316,6 +323,7 @@ const styles = StyleSheet.create({
   segmentText: {
     color: palette.muted,
     fontWeight: "600",
+    fontFamily: typography.sansFamilyMedium,
   },
   segmentTextActive: {
     color: palette.text,
@@ -330,11 +338,13 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   noticeBody: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   previewCard: {
     backgroundColor: "#FFF8F2",
@@ -348,11 +358,14 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 15,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   previewBody: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   previewButtonRow: {
     flexDirection: "row",
@@ -376,6 +389,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   previewButtonSecondaryText: {
     color: palette.text,
@@ -385,6 +399,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginTop: 6,
+    fontFamily: typography.sansFamilyMedium,
   },
   textInput: {
     backgroundColor: "#FFF7F2",
@@ -395,21 +410,26 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     color: palette.text,
     fontSize: 16,
+    fontFamily: typography.sansFamily,
   },
   sectionTitle: {
     color: palette.text,
     fontSize: 20,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.3,
   },
   sectionHint: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   errorText: {
     color: "#A73434",
     fontSize: 14,
     fontWeight: "600",
+    fontFamily: typography.sansFamilyMedium,
   },
   primaryButton: {
     backgroundColor: palette.text,
@@ -426,5 +446,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
 });

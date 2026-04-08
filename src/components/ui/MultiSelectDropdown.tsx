@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 interface MultiSelectDropdownProps {
   label: string;
@@ -74,6 +75,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+    letterSpacing: 0.2,
   },
   button: {
     minHeight: 48,
@@ -92,6 +95,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     flex: 1,
+    fontFamily: typography.sansFamily,
   },
   placeholderText: {
     color: palette.muted,
@@ -123,6 +127,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     flex: 1,
+    fontFamily: typography.sansFamilyMedium,
   },
   optionCheck: {
     color: palette.berry,
@@ -136,5 +141,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     lineHeight: 18,
+    fontFamily: typography.sansFamily,
   },
 });

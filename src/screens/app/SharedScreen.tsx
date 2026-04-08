@@ -21,6 +21,7 @@ import {
 import { pickImageFromDevice } from "../../lib/pickImageFromDevice";
 import { useAppData } from "../../providers/AppDataProvider";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 import { CalendarEvent, JournalEntry, TimeCapsule } from "../../types";
 
 const monthNames = getMonthNames();
@@ -429,6 +430,7 @@ export function SharedScreen() {
       <SectionCard
         title="Shared journal"
         subtitle="Capture the moments that matter, not just the messages you send"
+        variant="memory"
       >
         <View style={styles.editorCard}>
           <View style={styles.editorHeader}>
@@ -618,7 +620,7 @@ export function SharedScreen() {
         )) : (
           <View style={styles.emptyCard}>
             <Text style={styles.feedMeta}>
-              Your shared journal starts blank. Add your first memory once you begin using the app together.
+              Nothing is tucked here yet. Start with one small memory you do not want to lose.
             </Text>
           </View>
         )}
@@ -627,6 +629,7 @@ export function SharedScreen() {
       <SectionCard
         title="Time capsule"
         subtitle="Leave something meaningful for later"
+        variant="memory"
       >
         <View style={styles.editorCard}>
           <View style={styles.editorHeader}>
@@ -813,7 +816,7 @@ export function SharedScreen() {
         )) : (
           <View style={styles.emptyCard}>
             <Text style={styles.feedMeta}>
-              Time capsules will show up here after you save your first message for later.
+              No letters are waiting here yet. Save one for later, or write an anytime note for the days someone misses you.
             </Text>
           </View>
         )}
@@ -822,6 +825,7 @@ export function SharedScreen() {
       <SectionCard
         title="Shared calendar"
         subtitle="Stay aligned on rituals, travel, birthdays, and intentional time together"
+        variant="memory"
       >
         <View style={styles.editorCard}>
           <View style={styles.editorHeader}>
@@ -932,7 +936,7 @@ export function SharedScreen() {
         )) : (
           <View style={styles.emptyCard}>
             <Text style={styles.feedMeta}>
-              Your shared calendar is empty right now. Trips, rituals, and visits will appear here once you create them.
+              The calendar is still quiet. Add a ritual, a visit, or one future thing to look forward to.
             </Text>
           </View>
         )}
@@ -963,6 +967,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   requiredMark: {
     color: palette.berry,
@@ -999,21 +1004,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
+    fontFamily: typography.sansFamilyMedium,
   },
   timelineDay: {
     color: palette.text,
     fontSize: 24,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
   },
   timelineTitle: {
     color: palette.text,
     fontSize: 18,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   timelineBody: {
     color: palette.muted,
     fontSize: 15,
     lineHeight: 22,
+    fontFamily: typography.sansFamily,
   },
   photoStrip: {
     flexDirection: "row",
@@ -1049,6 +1059,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 0.8,
+    fontFamily: typography.displayFamily,
   },
   photoArtHint: {
     color: palette.berry,
@@ -1057,6 +1068,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginTop: 4,
+    fontFamily: typography.sansFamilyMedium,
   },
   photoMeta: {
     paddingHorizontal: 12,
@@ -1067,6 +1079,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 18,
+    fontFamily: typography.sansFamilyMedium,
   },
   photoTileHint: {
     color: palette.berry,
@@ -1075,6 +1088,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textTransform: "uppercase",
     letterSpacing: 0.4,
+    fontFamily: typography.sansFamilyMedium,
   },
   photoAddTile: {
     width: 128,
@@ -1103,12 +1117,14 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
   },
   photoAddHint: {
     color: palette.muted,
     fontSize: 11,
     lineHeight: 16,
     marginTop: 6,
+    fontFamily: typography.sansFamily,
   },
   photoComposer: {
     gap: 10,
@@ -1117,6 +1133,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   inputRow: {
     flexDirection: "row",
@@ -1132,6 +1149,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: palette.text,
     fontSize: 14,
+    fontFamily: typography.sansFamily,
   },
   detailInput: {
     minHeight: 90,
@@ -1148,6 +1166,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "800",
+    fontFamily: typography.sansFamilyMedium,
   },
   primaryButton: {
     borderRadius: 18,
@@ -1161,6 +1180,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
+    fontFamily: typography.sansFamilyMedium,
   },
   secondaryButton: {
     borderRadius: 18,
@@ -1176,6 +1196,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "800",
+    fontFamily: typography.sansFamilyMedium,
   },
   actionRow: {
     flexDirection: "row",
@@ -1195,6 +1216,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   inlineActionDanger: {
     backgroundColor: "#FFF1F0",
@@ -1204,11 +1226,13 @@ const styles = StyleSheet.create({
     color: "#B5544B",
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   editLink: {
     color: palette.berry,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   selectWrap: {
     gap: 8,
@@ -1230,6 +1254,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     flex: 1,
+    fontFamily: typography.sansFamily,
   },
   selectChevron: {
     color: palette.muted,
@@ -1253,6 +1278,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   uploadPhotoButton: {
     alignSelf: "flex-start",
@@ -1267,6 +1293,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   ideaWrap: {
     flexDirection: "row",
@@ -1285,6 +1312,7 @@ const styles = StyleSheet.create({
     color: palette.berry,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   feedCard: {
     flexDirection: "row",
@@ -1310,6 +1338,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontWeight: "700",
     fontSize: 12,
+    fontFamily: typography.sansFamilyMedium,
   },
   feedCopy: {
     flex: 1,
@@ -1319,17 +1348,21 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 17,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   feedMeta: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   helperMeta: {
     color: palette.berry,
     fontSize: 12,
     fontWeight: "600",
     lineHeight: 18,
+    fontFamily: typography.sansFamily,
   },
   emptyCard: {
     backgroundColor: "#FFF8F2",
@@ -1362,10 +1395,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
+    fontFamily: typography.sansFamilyMedium,
   },
   calendarDateDay: {
     color: palette.text,
     fontSize: 24,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
   },
 });

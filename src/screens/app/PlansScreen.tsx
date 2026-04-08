@@ -6,6 +6,7 @@ import { SectionCard } from "../../components/ui/SectionCard";
 import { dateIdeas, smartCallWindows } from "../../data/mockData";
 import { useAppData } from "../../providers/AppDataProvider";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 const alternateWindowsByPerson: Record<string, string[]> = {
   Sean: [
@@ -54,6 +55,10 @@ function buildAlternateWindows(name: string, timezone: string) {
       `Sunday 11:00 AM your time / ${timezone || "their timezone"}`,
     ]
   );
+}
+
+function toTitleCase(value: string) {
+  return value.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export function PlansScreen() {
@@ -229,7 +234,7 @@ export function PlansScreen() {
               {["all", "low", "steady", "high"].map((energy) => (
                 <FilterChip
                   key={energy}
-                  label={energy}
+                  label={toTitleCase(energy)}
                   active={selectedEnergy === energy}
                   onPress={() =>
                     setSelectedEnergy(energy as "all" | "low" | "steady" | "high")
@@ -241,7 +246,7 @@ export function PlansScreen() {
         ) : (
           <View style={styles.emptyState}>
             <Text style={styles.feedMeta}>
-              Smart call scheduling starts blank for new accounts. Add your people first, then this section can suggest shared windows.
+              This space will suggest shared windows once you add the people you want to stay in rhythm with.
             </Text>
           </View>
         )}
@@ -255,7 +260,7 @@ export function PlansScreen() {
               <Text style={styles.feedTitle}>{slot.title}</Text>
               <Text style={styles.feedMeta}>{slot.detail}</Text>
               <Text style={styles.helperMeta}>
-                {slot.person} | {slot.energyFit} energy fit
+                {slot.person} | {toTitleCase(slot.energyFit)} energy fit
               </Text>
 
               <View style={styles.actionRow}>
@@ -297,8 +302,7 @@ export function PlansScreen() {
         {!filteredCallWindows.length && liveCallWindows.length ? (
           <View style={styles.emptyState}>
             <Text style={styles.feedMeta}>
-              No perfect match yet for that energy level. Try a different energy filter
-              to see more suggestions.
+              No gentle overlap for that energy right now. Try another pace and see what opens up.
             </Text>
           </View>
         ) : null}
@@ -313,6 +317,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 28,
     fontWeight: "700",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   chipWrap: {
     flexDirection: "row",
@@ -348,8 +354,8 @@ const styles = StyleSheet.create({
     color: palette.berry,
     fontSize: 11,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    fontFamily: typography.sansFamilyMedium,
   },
   callCard: {
     flexDirection: "row",
@@ -379,8 +385,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     textAlign: "center",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    fontFamily: typography.sansFamilyMedium,
   },
   toolCopy: {
     flex: 1,
@@ -409,6 +415,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   secondaryAction: {
     borderRadius: 18,
@@ -423,8 +430,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 15,
     fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   confirmationCard: {
     backgroundColor: palette.mint,
@@ -460,11 +467,13 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   helperMeta: {
     color: palette.berry,
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: typography.sansFamily,
   },
   subsectionBlock: {
     gap: 10,
@@ -474,6 +483,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 16,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   savedIdeaCard: {
     flexDirection: "row",
@@ -490,8 +501,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 12,
     fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.2,
+    fontFamily: typography.sansFamilyMedium,
   },
   emptyState: {
     backgroundColor: "#FFF8F2",
@@ -504,10 +515,13 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 17,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   feedMeta: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
 });

@@ -11,6 +11,7 @@ import { useAppData } from "../../providers/AppDataProvider";
 import { useProfile } from "../../providers/ProfileProvider";
 import { Connection, ConnectionFilter, CurrentUserProfile, SocialPlatform } from "../../types";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 const filters: ConnectionFilter[] = ["all", "partner", "friend", "family"];
 const profileNoteOptions = [
@@ -552,7 +553,7 @@ export function ConnectionsScreen() {
             <View style={styles.feedCopy}>
               <Text style={styles.feedTitle}>No people added yet</Text>
               <Text style={styles.feedMeta}>
-                Start blank and build your own circle. Add your first partner, friend, or family member below.
+                Start with one person who feels like home, then let the circle grow from there.
               </Text>
             </View>
           </View>
@@ -780,7 +781,7 @@ export function ConnectionsScreen() {
             <View style={styles.feedCopy}>
               <Text style={styles.feedTitle}>No socials linked yet</Text>
               <Text style={styles.feedMeta}>
-                Pick the platforms you want to connect when you are ready to personalize your account.
+                That is okay. Same Time can stay intimate first, then connected later.
               </Text>
             </View>
           </View>
@@ -842,6 +843,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 24,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
   },
   profileCopy: {
     flex: 1,
@@ -851,16 +853,20 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 17,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   profileMeta: {
     color: palette.muted,
     fontSize: 14,
     fontWeight: "600",
+    fontFamily: typography.sansFamilyMedium,
   },
   profileNote: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   profileSubtle: {
     color: palette.berry,
@@ -868,11 +874,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.6,
+    fontFamily: typography.sansFamilyMedium,
   },
   accountStatus: {
     color: palette.muted,
     fontSize: 12,
     fontWeight: "600",
+    fontFamily: typography.sansFamily,
   },
   profileSocialRow: {
     flexDirection: "row",
@@ -898,6 +906,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.4,
+    fontFamily: typography.sansFamilyMedium,
   },
   actionRow: {
     flexDirection: "row",
@@ -916,6 +925,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   editorCard: {
     gap: 12,
@@ -938,6 +948,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   requiredMark: {
     color: palette.berry,
@@ -947,6 +958,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: -4,
+    fontFamily: typography.sansFamily,
   },
   textInput: {
     borderRadius: 18,
@@ -957,6 +969,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: palette.text,
     fontSize: 14,
+    fontFamily: typography.sansFamily,
   },
   detailInput: {
     minHeight: 84,
@@ -981,6 +994,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     flex: 1,
+    fontFamily: typography.sansFamily,
   },
   selectPlaceholder: {
     color: "#A08F89",
@@ -1007,6 +1021,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
   suggestionList: {
     borderRadius: 18,
@@ -1029,6 +1044,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 14,
     fontWeight: "600",
+    fontFamily: typography.sansFamilyMedium,
   },
   suggestionMeta: {
     color: palette.berry,
@@ -1036,11 +1052,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.4,
+    fontFamily: typography.sansFamilyMedium,
   },
   accountLabel: {
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   uploadRow: {
     flexDirection: "row",
@@ -1057,6 +1075,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.4,
+    fontFamily: typography.sansFamilyMedium,
   },
   primaryButton: {
     backgroundColor: palette.text,
@@ -1069,6 +1088,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
   },
   feedCard: {
     flexDirection: "row",
@@ -1094,6 +1114,7 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontWeight: "700",
     fontSize: 12,
+    fontFamily: typography.sansFamilyMedium,
   },
   feedCopy: {
     flex: 1,
@@ -1103,10 +1124,13 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 17,
     fontWeight: "800",
+    fontFamily: typography.displayFamily,
+    letterSpacing: -0.2,
   },
   feedMeta: {
     color: palette.muted,
     fontSize: 14,
     lineHeight: 20,
+    fontFamily: typography.sansFamily,
   },
 });

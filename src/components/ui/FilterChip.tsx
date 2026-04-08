@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { palette } from "../../theme/palette";
+import { typography } from "../../theme/typography";
 
 export function FilterChip({
   label,
@@ -26,9 +27,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: palette.line,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: "#FFF7F2",
+    backgroundColor: "#FFF8F0",
   },
   chipActive: {
     backgroundColor: palette.text,
@@ -38,6 +39,8 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "600",
+    fontFamily: typography.sansFamilyMedium,
+    letterSpacing: 0.2,
   },
   labelActive: {
     color: "#FFFFFF",
