@@ -109,9 +109,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!hasSupabaseCredentials) {
+      startTransition(() => {
+        setDemoUserEmail(null);
+        setDemoDisplayName(null);
+      });
       setInitialized(true);
       return;
     }
+
+    startTransition(() => {
+      setDemoUserEmail(null);
+      setDemoDisplayName(null);
+    });
 
     let isActive = true;
 
@@ -125,6 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!error) {
           startTransition(() => {
             setSession(data.session);
+            setDemoUserEmail(null);
+            setDemoDisplayName(null);
           });
         }
 
@@ -139,6 +150,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       startTransition(() => {
         setSession(nextSession);
+        if (nextSession?.user) {
+          setDemoUserEmail(null);
+          setDemoDisplayName(null);
+        }
       });
     });
 
