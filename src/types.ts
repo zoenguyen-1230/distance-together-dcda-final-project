@@ -35,6 +35,7 @@ export interface Connection {
   accent: string;
   linkedSocials: SocialPlatform[];
   accountStatus: string;
+  photoUri?: string;
 }
 
 export interface CurrentUserProfile {
@@ -44,14 +45,24 @@ export interface CurrentUserProfile {
   relationshipFocus: string;
   note: string;
   linkedSocials: SocialPlatform[];
+  photoUri?: string;
 }
 
 export interface Message {
   id: string;
-  from: string;
+  connectionId: string;
+  author: "self" | "connection";
   type: "Text" | "Photo" | "Voice memo" | "Video message";
   body: string;
   sentAt: string;
+  mediaUri?: string;
+  reactions?: string[];
+}
+
+export interface JournalPhoto {
+  id: string;
+  label: string;
+  uri?: string;
 }
 
 export interface JournalEntry {
@@ -59,7 +70,8 @@ export interface JournalEntry {
   date: string;
   title: string;
   body: string;
-  photos: string[];
+  photos: JournalPhoto[];
+  participantIds?: string[];
 }
 
 export interface MoodUpdate {
@@ -72,11 +84,23 @@ export interface MoodUpdate {
   color: string;
 }
 
+export interface CheckInPrompt {
+  id: string;
+  connectionId: string;
+  promptText: string;
+  sentAt: string;
+  direction: "incoming" | "outgoing";
+  replyText?: string;
+}
+
 export interface TimeCapsule {
   id: string;
   title: string;
   from: string;
+  body: string;
+  unlockMode: "date" | "anytime";
   unlockDate: string;
+  participantIds?: string[];
 }
 
 export interface CalendarEvent {
@@ -85,6 +109,8 @@ export interface CalendarEvent {
   day: string;
   title: string;
   detail: string;
+  dateValue?: string;
+  participantIds?: string[];
 }
 
 export interface VisitPlan {
@@ -97,6 +123,7 @@ export interface VisitPlan {
   daysAway: number;
   plan: string;
   participantIds: string[];
+  archived?: boolean;
 }
 
 export interface ItineraryItem {
@@ -127,8 +154,14 @@ export interface FlightWindow {
   trip: string;
   startDate: string;
   endDate?: string;
-  price: number;
-  note: string;
+  price?: number;
+  note?: string;
+}
+
+export interface FlightLeg {
+  id: string;
+  flightCode: string;
+  routeNote: string;
 }
 
 export interface FlightTrackerEntry {
@@ -137,8 +170,7 @@ export interface FlightTrackerEntry {
   connectionId: string;
   direction: "arrival" | "departure";
   travelDate: string;
-  flightCode: string;
-  routeNote: string;
+  legs: FlightLeg[];
 }
 
 export interface PackingItem {

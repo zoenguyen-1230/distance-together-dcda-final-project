@@ -2,6 +2,7 @@ import {
   BudgetItem,
   CalendarEvent,
   CallWindow,
+  CheckInPrompt,
   Connection,
   FlightWindow,
   FlightTrackerEntry,
@@ -38,6 +39,7 @@ export const connections: Connection[] = [
     accent: "#FFD4D8",
     linkedSocials: ["Instagram", "Spotify"],
     accountStatus: "Synced profile + shared playlist",
+    photoUri: undefined,
   },
   {
     id: "conn-2",
@@ -50,6 +52,7 @@ export const connections: Connection[] = [
     accent: "#DFF3FF",
     linkedSocials: ["Spotify", "TikTok"],
     accountStatus: "Synced music + short-form profile",
+    photoUri: undefined,
   },
   {
     id: "conn-4",
@@ -62,6 +65,7 @@ export const connections: Connection[] = [
     accent: "#E8F8F2",
     linkedSocials: ["Instagram"],
     accountStatus: "Synced photo profile",
+    photoUri: undefined,
   },
   {
     id: "conn-5",
@@ -74,6 +78,7 @@ export const connections: Connection[] = [
     accent: "#F4E7FF",
     linkedSocials: ["Instagram", "Facebook"],
     accountStatus: "Synced profile + family graph",
+    photoUri: undefined,
   },
   {
     id: "conn-3",
@@ -86,34 +91,39 @@ export const connections: Connection[] = [
     accent: "#FFF1E7",
     linkedSocials: ["Facebook"],
     accountStatus: "Synced family updates",
+    photoUri: undefined,
   },
 ];
 
 export const conversations: Message[] = [
   {
     id: "msg-1",
-    from: "Sean",
+    connectionId: "conn-1",
+    author: "connection",
     type: "Text",
     body: "Happy Tue's Day Tuesday",
     sentAt: "8:12 AM",
   },
   {
     id: "msg-2",
-    from: "You",
+    connectionId: "conn-1",
+    author: "self",
     type: "Text",
     body: "Saving that spot for our Austin trip. I also added Wednesday FaceTime to the shared calendar.",
     sentAt: "8:25 AM",
   },
   {
     id: "msg-3",
-    from: "Sean",
+    connectionId: "conn-1",
+    author: "connection",
     type: "Photo",
     body: "Photo drop: Yogurt bowl and banana for breakfast baby",
     sentAt: "8:31 AM",
   },
   {
     id: "msg-4",
-    from: "You",
+    connectionId: "conn-1",
+    author: "self",
     type: "Video message",
     body: "Recorded a quick update from Dallas so it feels like you were here.",
     sentAt: "9:04 AM",
@@ -127,20 +137,54 @@ export const promptDeck = [
   "What memory are you replaying lately?",
 ];
 
+export const checkInPrompts: CheckInPrompt[] = [
+  {
+    id: "prompt-1",
+    connectionId: "conn-1",
+    promptText: "How was your day, really?",
+    sentAt: "Sent by Sean • 1 hr ago",
+    direction: "incoming",
+  },
+  {
+    id: "prompt-2",
+    connectionId: "conn-3",
+    promptText: "What's one small thing I can do for you from afar this week?",
+    sentAt: "Sent by Hien • This morning",
+    direction: "incoming",
+  },
+  {
+    id: "prompt-3",
+    connectionId: "conn-5",
+    promptText: "What memory are you replaying lately?",
+    sentAt: "Sent by Julie • Yesterday",
+    direction: "incoming",
+  },
+];
+
 export const journalEntries: JournalEntry[] = [
   {
     id: "journal-1",
     date: "March 29",
     title: "Homecook Night",
     body: "We cooked sisig and Vietnamese thit rang chay canh at home while playing music and watching You've Got Mail.",
-    photos: ["sisig plating", "thit rang canh", "movie night setup"],
+    photos: [
+      { id: "journal-1-photo-1", label: "sisig plating" },
+      { id: "journal-1-photo-2", label: "thit rang canh" },
+      { id: "journal-1-photo-3", label: "movie night setup" },
+    ],
+    participantIds: ["conn-1"],
   },
   {
     id: "journal-2",
     date: "March 28",
     title: "Fort Worth Date",
     body: "We grabbed coffee at Ampersand, walked to Kimbell Art Museum and discussed about art, life, and future. Then we had lunch at Terry Black's Barbecue, did window shopping at Urban Outfitters, strolled around Fort Worth Botanic Garden, did grocery shopping at Target, and ended the night with sashimi and handrolls at Hatsuyuki Handroll Bar.",
-    photos: ["Ampersand coffee", "Kimbell walk", "Hatsuyuki handrolls"],
+    photos: [
+      { id: "journal-2-photo-1", label: "Ampersand coffee" },
+      { id: "journal-2-photo-2", label: "Kimbell walk" },
+      { id: "journal-2-photo-3", label: "Hatsuyuki handrolls" },
+    ],
+    participantIds: ["conn-1"],
   },
 ];
 
@@ -197,13 +241,19 @@ export const timeCapsules: TimeCapsule[] = [
     id: "capsule-1",
     title: "Open this on our 6 month mark",
     from: "You",
+    body: "I hope future us still finds ways to make distance feel smaller. I love how intentional we are becoming.",
+    unlockMode: "date",
     unlockDate: "September 17, 2026",
+    participantIds: ["conn-1"],
   },
   {
     id: "capsule-2",
     title: "For the next hard day",
     from: "Sean",
+    body: "Open when you miss me and need a reminder that we are building something real, even from far away.",
+    unlockMode: "anytime",
     unlockDate: "Unlock anytime with permission",
+    participantIds: ["conn-1"],
   },
 ];
 
@@ -214,6 +264,8 @@ export const calendarEvents: CalendarEvent[] = [
     day: "12",
     title: "Sunday check-in ritual",
     detail: "9:00 PM CT | Big Sur trip/NFL in Dallas updates + photo recap + mood share",
+    dateValue: "2026-04-12",
+    participantIds: ["conn-1"],
   },
   {
     id: "event-2",
@@ -221,6 +273,8 @@ export const calendarEvents: CalendarEvent[] = [
     day: "24",
     title: "Weekend trip to Austin, TX",
     detail: "Austin | Try new cuisine + picnic date + sightseeing",
+    dateValue: "2026-04-24",
+    participantIds: ["conn-1"],
   },
   {
     id: "event-3",
@@ -228,6 +282,8 @@ export const calendarEvents: CalendarEvent[] = [
     day: "18",
     title: "Family visit to San Francisco, CA",
     detail: "San Francisco | Family dinner",
+    dateValue: "2026-05-18",
+    participantIds: ["conn-3"],
   },
 ];
 
@@ -369,7 +425,7 @@ export const tripToolkit: TripToolkitItem[] = [
   {
     id: "toolkit-2",
     title: "Weather forecast",
-    detail: "Track the expected temperature range and rain risk for Fort Worth, San Francisco, and New York.",
+    detail: "Track the expected temperature range and rain risk for any trip city you add.",
   },
   {
     id: "toolkit-3",
@@ -441,8 +497,14 @@ export const trackedFlights: FlightTrackerEntry[] = [
     connectionId: "conn-1",
     direction: "arrival",
     travelDate: "2026-04-20",
-    flightCode: "AA 1198",
-    routeNote: "Sean lands mid-morning from San Francisco so you can start the trip together.",
+    legs: [
+      {
+        id: "tracked-flight-1-leg-1",
+        flightCode: "AA 1198",
+        routeNote:
+          "Sean lands mid-morning from San Francisco so you can start the trip together.",
+      },
+    ],
   },
   {
     id: "tracked-flight-2",
@@ -450,8 +512,13 @@ export const trackedFlights: FlightTrackerEntry[] = [
     connectionId: "conn-3",
     direction: "arrival",
     travelDate: "2026-05-18",
-    flightCode: "UA 201",
-    routeNote: "Hien arrives in time for the family dinner block.",
+    legs: [
+      {
+        id: "tracked-flight-2-leg-1",
+        flightCode: "UA 201",
+        routeNote: "Hien arrives in time for the family dinner block.",
+      },
+    ],
   },
 ];
 
@@ -588,6 +655,14 @@ export const dateIdeas = [
   "Trade voice memos telling the story behind one old photo each.",
   "Build a shared playlist, then journal one memory each song unlocks.",
   "Plan a dream day in the city you'll visit next and save it to the calendar.",
+  "Swap family recipes and compare the stories behind each dish.",
+  "Make a tiny two-person book, movie, or documentary club and debrief after one chapter or episode.",
+  "Do a friendship photo scavenger hunt and send what you find from your neighborhoods.",
+  "Create a shared nostalgia list of songs, snacks, shows, or places you still talk about.",
+  "Send each other one life update question and answer it honestly over voice notes.",
+  "Build a meme, article, or reel exchange around one theme and rank your favorites.",
+  "Do a low-pressure life admin date and help each other finish one task you have both been avoiding.",
+  "Take a walk at the same time and compare what your streets, parks, or skies look like.",
 ];
 
 export const composerActions = [

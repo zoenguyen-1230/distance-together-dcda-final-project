@@ -1,23 +1,95 @@
 import React, { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MetricCard } from "../../components/ui/MetricCard";
-import { FilterChip } from "../../components/ui/FilterChip";
+import { MultiSelectDropdown } from "../../components/ui/MultiSelectDropdown";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
-import { connections, moodUpdates, nextVisit, promptDeck } from "../../data/mockData";
+import { moodUpdates, nextVisit, promptDeck } from "../../data/mockData";
+import { getMonthNames, parseDateValue } from "../../lib/dateHelpers";
 import { useAuth } from "../../providers/AuthProvider";
+import { useAppData } from "../../providers/AppDataProvider";
 import { useProfile } from "../../providers/ProfileProvider";
 import { palette } from "../../theme/palette";
 
 const moodOptions = ["hopeful", "busy", "calm", "excited"];
 const energyOptions = ["low", "steady", "high"];
 const healthOptions = ["rested", "okay", "needs rest", "on the go"];
+const monthNames = getMonthNames();
+
+function getJournalEntryDate(entryDate: string) {
+  const trimmed = entryDate.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return parseDateValue(trimmed);
+  }
+
+  const withYearMatch = trimmed.match(/^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/);
+  if (withYearMatch) {
+    const [, monthName, dayText, yearText] = withYearMatch;
+    const monthIndex = monthNames.findIndex((month) => month === monthName);
+
+    if (monthIndex >= 0) {
+      return new Date(Number(yearText), monthIndex, Number(dayText), 12, 0, 0);
+    }
+  }
+
+  const withoutYearMatch = trimmed.match(/^([A-Za-z]+)\s+(\d{1,2})$/);
+  if (withoutYearMatch) {
+    const [, monthName, dayText] = withoutYearMatch;
+    const monthIndex = monthNames.findIndex((month) => month === monthName);
+
+    if (monthIndex >= 0) {
+      return new Date(new Date().getFullYear(), monthIndex, Number(dayText), 12, 0, 0);
+    }
+  }
+
+  return null;
+}
+
+function getJournalStreak(entryDates: string[]) {
+  if (!entryDates.length) {
+    return 0;
+  }
+
+  const uniqueTimes = Array.from(
+    new Set(
+      entryDates
+        .map((entryDate) => getJournalEntryDate(entryDate)?.getTime() ?? null)
+        .filter((value): value is number => typeof value === "number")
+    )
+  ).sort((a, b) => b - a);
+
+  if (!uniqueTimes.length) {
+    return 0;
+  }
+
+  let streak = 1;
+
+  for (let index = 1; index < uniqueTimes.length; index += 1) {
+    const previous = uniqueTimes[index - 1];
+    const current = uniqueTimes[index];
+    const differenceInDays = Math.round((previous - current) / (1000 * 60 * 60 * 24));
+
+    if (differenceInDays === 1) {
+      streak += 1;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
 
 export function HomeScreen() {
   const { displayName, userEmail, isDemoMode, previewMode } = useAuth();
   const { profile } = useProfile();
-  const liveConnections = isDemoMode ? connections : [];
+  const { connections, journalEntries, timeCapsules, checkInPrompts, setCheckInPrompts } = useAppData();
+  const liveConnections = connections;
   const liveMoodUpdates = isDemoMode ? moodUpdates : [];
   const liveNextVisit = isDemoMode ? nextVisit : null;
   const [selectedPrompt, setSelectedPrompt] = useState(promptDeck[0]);
@@ -27,10 +99,18 @@ export function HomeScreen() {
   const [openStatusMenu, setOpenStatusMenu] = useState<"mood" | "energy" | "health" | null>(
     null
   );
+  const [openAudienceMenu, setOpenAudienceMenu] = useState(false);
+  const [openPromptMenu, setOpenPromptMenu] = useState(false);
+  const [openPromptAudienceMenu, setOpenPromptAudienceMenu] = useState(false);
   const [selectedAudience, setSelectedAudience] = useState<string[]>(
     isDemoMode ? ["conn-1", "conn-3"] : []
   );
+  const [selectedPromptAudience, setSelectedPromptAudience] = useState<string[]>(
+    isDemoMode ? ["conn-1", "conn-3"] : []
+  );
   const [statusSent, setStatusSent] = useState(false);
+  const [promptSent, setPromptSent] = useState(false);
+  const [promptReplyDrafts, setPromptReplyDrafts] = useState<Record<string, string>>({});
 
   const toggleAudience = (connectionId: string) => {
     setSelectedAudience((current) =>
@@ -40,9 +120,67 @@ export function HomeScreen() {
     );
   };
 
+  const togglePromptAudience = (connectionId: string) => {
+    setSelectedPromptAudience((current) =>
+      current.includes(connectionId)
+        ? current.filter((item) => item !== connectionId)
+        : [...current, connectionId]
+    );
+  };
+
   const sendStatus = () => {
     setStatusSent(true);
   };
+
+  const sendPrompt = () => {
+    if (!selectedPromptAudience.length) {
+      return;
+    }
+
+    setCheckInPrompts((current) => [
+      ...selectedPromptAudience.map((connectionId, index) => ({
+        id: `prompt-${Date.now()}-${index}`,
+        connectionId,
+        promptText: selectedPrompt,
+        sentAt: "Sent just now",
+        direction: "outgoing" as const,
+      })),
+      ...current,
+    ]);
+    setPromptSent(true);
+  };
+
+  const incomingPrompts = checkInPrompts.filter((prompt) => prompt.direction === "incoming");
+
+  const savePromptReply = (promptId: string) => {
+    const nextReply = (promptReplyDrafts[promptId] ?? "").trim();
+
+    if (!nextReply) {
+      return;
+    }
+
+    setCheckInPrompts((current) =>
+      current.map((prompt) =>
+        prompt.id === promptId
+          ? {
+              ...prompt,
+              replyText: nextReply,
+            }
+          : prompt
+      )
+    );
+  };
+
+  const bannerBody = liveNextVisit
+    ? `${liveNextVisit.daysAway} days until your next time together in ${liveNextVisit.location}.`
+    : liveConnections.length === 1
+      ? `You have 1 person in your circle. Start a chat, share a live update, or plan your next memory together.`
+      : liveConnections.length > 1
+        ? `You have ${liveConnections.length} people in your circle. Keep the momentum going with a check-in, shared plan, or new memory.`
+        : "Start by setting up your profile and adding your first person.";
+  const sharedEntryCount = journalEntries.length;
+  const savedCapsuleCount = timeCapsules.length;
+  const journalStreak = getJournalStreak(journalEntries.map((entry) => entry.date));
 
   return (
     <ScreenSurface>
@@ -64,17 +202,13 @@ export function HomeScreen() {
         <Text style={styles.bannerTitle}>
           Welcome back, {profile.displayName || displayName || userEmail?.split("@")[0] || "friend"}.
         </Text>
-        <Text style={styles.bannerBody}>
-          {liveNextVisit
-            ? `${liveNextVisit.daysAway} days until your next time together in ${liveNextVisit.location}.`
-            : "Start by setting up your profile and adding your first person."}
-        </Text>
+        <Text style={styles.bannerBody}>{bannerBody}</Text>
       </LinearGradient>
 
       <View style={styles.metricRow}>
-        <MetricCard label="Streak" value={isDemoMode ? "14 days" : "0 days"} accent={palette.coral} />
-        <MetricCard label="Shared entries" value={isDemoMode ? "42" : "0"} accent={palette.teal} />
-        <MetricCard label="Pending capsules" value={isDemoMode ? "3" : "0"} accent={palette.berry} />
+        <MetricCard label="Streak" value={`${journalStreak} day${journalStreak === 1 ? "" : "s"}`} accent={palette.coral} />
+        <MetricCard label="Shared entries" value={`${sharedEntryCount}`} accent={palette.teal} />
+        <MetricCard label="Saved capsules" value={`${savedCapsuleCount}`} accent={palette.berry} />
       </View>
 
       <SectionCard
@@ -187,25 +321,20 @@ export function HomeScreen() {
         </View>
 
         <View style={styles.controlGroup}>
-          <Text style={styles.controlLabel}>Send to</Text>
-          {liveConnections.length ? (
-            <View style={styles.chipWrap}>
-              {liveConnections.map((connection) => (
-                <FilterChip
-                  key={connection.id}
-                  label={connection.name}
-                  active={selectedAudience.includes(connection.id)}
-                  onPress={() => toggleAudience(connection.id)}
-                />
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyCard}>
-              <Text style={styles.feedMeta}>
-                Add someone in `People` before sending a live status update.
-              </Text>
-            </View>
-          )}
+          <MultiSelectDropdown
+            label="Send to"
+            selectedLabels={liveConnections
+              .filter((connection) => selectedAudience.includes(connection.id))
+              .map((connection) => connection.name)}
+            options={liveConnections.map((connection) => ({
+              id: connection.id,
+              label: connection.name,
+            }))}
+            isOpen={openAudienceMenu}
+            onToggleOpen={() => setOpenAudienceMenu((current) => !current)}
+            onToggleOption={toggleAudience}
+            emptyHelper="Add someone in `People` before sending a live status update."
+          />
         </View>
 
         <TouchableOpacity style={styles.primaryButton} onPress={sendStatus}>
@@ -230,19 +359,114 @@ export function HomeScreen() {
         subtitle="A small ritual for intentional connection"
       >
         <Text style={styles.promptText}>{selectedPrompt}</Text>
-        <View style={styles.chipWrap}>
-          {promptDeck.map((prompt) => (
-            <FilterChip
-              key={prompt}
-              label={prompt}
-              active={selectedPrompt === prompt}
-              onPress={() => setSelectedPrompt(prompt)}
-            />
-          ))}
+        <View style={styles.controlGroup}>
+          <Text style={styles.controlLabel}>Prompt to send</Text>
+          <View style={styles.selectWrap}>
+            <TouchableOpacity
+              style={styles.selectButton}
+              onPress={() => setOpenPromptMenu((current) => !current)}
+            >
+              <Text style={styles.promptSelectText}>{selectedPrompt}</Text>
+              <Text style={styles.selectChevron}>{openPromptMenu ? "▲" : "▼"}</Text>
+            </TouchableOpacity>
+            {openPromptMenu ? (
+              <View style={styles.optionList}>
+                {promptDeck.map((prompt) => (
+                  <TouchableOpacity
+                    key={prompt}
+                    style={styles.optionRow}
+                    onPress={() => {
+                      setSelectedPrompt(prompt);
+                      setOpenPromptMenu(false);
+                    }}
+                  >
+                    <Text style={styles.promptOptionText}>{prompt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+          </View>
         </View>
-        <TouchableOpacity style={styles.primaryButton}>
+        <MultiSelectDropdown
+          label="Send prompt to"
+          selectedLabels={liveConnections
+            .filter((connection) => selectedPromptAudience.includes(connection.id))
+            .map((connection) => connection.name)}
+          options={liveConnections.map((connection) => ({
+            id: connection.id,
+            label: connection.name,
+          }))}
+          isOpen={openPromptAudienceMenu}
+          onToggleOpen={() => setOpenPromptAudienceMenu((current) => !current)}
+          onToggleOption={togglePromptAudience}
+          emptyHelper="Add someone in `People` before sending a daily prompt."
+        />
+        <TouchableOpacity style={styles.primaryButton} onPress={sendPrompt}>
           <Text style={styles.primaryButtonText}>Send prompt to your circle</Text>
         </TouchableOpacity>
+        {promptSent ? (
+          <View style={styles.sentCard}>
+            <Text style={styles.feedSubtle}>
+              Prompt sent to{" "}
+              {liveConnections
+                .filter((connection) => selectedPromptAudience.includes(connection.id))
+                .map((connection) => connection.name)
+                .join(", ") || "your circle"}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={styles.promptInboxBlock}>
+          <Text style={styles.feedTitle}>Prompts from your people</Text>
+          <Text style={styles.feedMeta}>
+            Reply to each prompt separately so different people can ask different things at the same time.
+          </Text>
+          {incomingPrompts.length ? (
+            incomingPrompts.map((prompt) => {
+              const sender =
+                liveConnections.find((connection) => connection.id === prompt.connectionId)?.name ??
+                "Your person";
+
+              return (
+                <View key={prompt.id} style={styles.promptReplyCard}>
+                  <Text style={styles.feedTitle}>{sender} asked:</Text>
+                  <Text style={styles.promptText}>{prompt.promptText}</Text>
+                  <Text style={styles.feedSubtle}>{prompt.sentAt}</Text>
+                  <TextInput
+                    value={promptReplyDrafts[prompt.id] ?? prompt.replyText ?? ""}
+                    onChangeText={(value) =>
+                      setPromptReplyDrafts((current) => ({ ...current, [prompt.id]: value }))
+                    }
+                    placeholder={`Reply to ${sender}`}
+                    placeholderTextColor="#A08F89"
+                    style={[styles.textInput, styles.replyInput]}
+                    multiline
+                  />
+                  <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={() => savePromptReply(prompt.id)}
+                  >
+                    <Text style={styles.primaryButtonText}>
+                      {prompt.replyText ? "Update reply" : "Send reply"}
+                    </Text>
+                  </TouchableOpacity>
+                  {prompt.replyText ? (
+                    <View style={styles.replyPreviewCard}>
+                      <Text style={styles.feedMeta}>Your reply</Text>
+                      <Text style={styles.replyPreviewText}>{prompt.replyText}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })
+          ) : (
+            <View style={styles.emptyCard}>
+              <Text style={styles.feedMeta}>
+                Prompts from other people will land here when they check in with you.
+              </Text>
+            </View>
+          )}
+        </View>
       </SectionCard>
 
       <SectionCard
@@ -325,11 +549,6 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     fontWeight: "700",
   },
-  chipWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
   selectWrap: {
     gap: 6,
   },
@@ -351,6 +570,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
     textTransform: "capitalize",
+  },
+  promptSelectText: {
+    color: palette.text,
+    fontSize: 14,
+    flex: 1,
+    lineHeight: 20,
   },
   selectChevron: {
     color: palette.berry,
@@ -375,6 +600,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textTransform: "capitalize",
+  },
+  promptOptionText: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 20,
   },
   primaryButton: {
     backgroundColor: palette.text,
@@ -446,5 +677,43 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.6,
+  },
+  textInput: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: palette.text,
+    fontSize: 14,
+  },
+  replyInput: {
+    minHeight: 88,
+    textAlignVertical: "top",
+  },
+  promptInboxBlock: {
+    gap: 12,
+  },
+  promptReplyCard: {
+    gap: 10,
+    backgroundColor: "#FFF8F2",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: palette.line,
+    padding: 14,
+  },
+  replyPreviewCard: {
+    backgroundColor: "#FFFCFA",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#F0DDD3",
+    padding: 12,
+    gap: 4,
+  },
+  replyPreviewText: {
+    color: palette.text,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

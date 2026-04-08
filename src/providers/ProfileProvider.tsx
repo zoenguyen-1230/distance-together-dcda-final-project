@@ -29,6 +29,7 @@ function buildDefaultProfile(
     relationshipFocus: "",
     note: "",
     linkedSocials: defaultLinkedSocials,
+    photoUri: "",
   };
 }
 
@@ -68,6 +69,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
               linkedSocials: Array.isArray(savedProfile.linkedSocials)
                 ? (savedProfile.linkedSocials as SocialPlatform[])
                 : defaultProfile.linkedSocials,
+              photoUri:
+                typeof savedProfile.photoUri === "string"
+                  ? savedProfile.photoUri
+                  : defaultProfile.photoUri,
             });
             setInitialized(true);
           });

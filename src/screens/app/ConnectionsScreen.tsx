@@ -1,16 +1,31 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { connections as seedConnections, socialPlatforms } from "../../data/mockData";
+import { socialPlatforms } from "../../data/mockData";
 import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { locationDirectory } from "../../data/locationDirectory";
+import { pickImageFromDevice } from "../../lib/pickImageFromDevice";
 import { useAuth } from "../../providers/AuthProvider";
+import { useAppData } from "../../providers/AppDataProvider";
 import { useProfile } from "../../providers/ProfileProvider";
 import { Connection, ConnectionFilter, CurrentUserProfile, SocialPlatform } from "../../types";
 import { palette } from "../../theme/palette";
 
 const filters: ConnectionFilter[] = ["all", "partner", "friend", "family"];
+const profileNoteOptions = [
+  "Building a space for daily check-ins and gentle updates",
+  "Using this mostly for memory keeping and trip planning",
+  "Keeping partner, friends, and family together in one place",
+  "Focusing on rituals, moods, and thoughtful connection",
+];
+const accountStatusOptions = [
+  "Not connected yet",
+  "Invite sent",
+  "Synced profile photo",
+  "Synced profile + playlist",
+  "Synced socials + calendar context",
+];
 const seanProfileImage = require("../../assets/sean-profile.jpg");
 const profileImages: Record<string, any> = {
   "conn-1": seanProfileImage,
@@ -28,10 +43,8 @@ const socialVisuals: Record<
 };
 export function ConnectionsScreen() {
   const { isDemoMode } = useAuth();
+  const { connections, setConnections } = useAppData();
   const { profile, saveProfile } = useProfile();
-  const [connections, setConnections] = useState<Connection[]>(
-    isDemoMode ? seedConnections : []
-  );
   const [selectedFilter, setSelectedFilter] = useState<ConnectionFilter>(
     isDemoMode ? "partner" : "all"
   );
@@ -49,6 +62,8 @@ export function ConnectionsScreen() {
   const [profileDraftLinkedSocials, setProfileDraftLinkedSocials] = useState<
     SocialPlatform[]
   >(profile.linkedSocials);
+  const [profileDraftPhotoUri, setProfileDraftPhotoUri] = useState(profile.photoUri ?? "");
+  const [openProfileNoteMenu, setOpenProfileNoteMenu] = useState(false);
   const [selectedPersonId, setSelectedPersonId] = useState<string>("");
   const [editorVisible, setEditorVisible] = useState(false);
   const [draftName, setDraftName] = useState("");
@@ -56,9 +71,12 @@ export function ConnectionsScreen() {
   const [draftLocation, setDraftLocation] = useState("");
   const [draftTimezone, setDraftTimezone] = useState("");
   const [draftPhotoLabel, setDraftPhotoLabel] = useState("");
+  const [draftPhotoUri, setDraftPhotoUri] = useState("");
   const [draftNote, setDraftNote] = useState("");
   const [draftLinkedSocials, setDraftLinkedSocials] = useState<SocialPlatform[]>([]);
   const [draftAccountStatus, setDraftAccountStatus] = useState("");
+  const [openConnectionNoteMenu, setOpenConnectionNoteMenu] = useState(false);
+  const [openAccountStatusMenu, setOpenAccountStatusMenu] = useState(false);
 
   const filteredConnections = useMemo(
     () =>
@@ -94,7 +112,6 @@ export function ConnectionsScreen() {
   }, [draftLocation]);
 
   useEffect(() => {
-    setConnections(isDemoMode ? seedConnections : []);
     setSelectedFilter(isDemoMode ? "partner" : "all");
     setSelectedSocials(isDemoMode ? ["Instagram", "Spotify"] : []);
     setEditorVisible(false);
@@ -108,6 +125,7 @@ export function ConnectionsScreen() {
     setProfileDraftRelationshipFocus(profile.relationshipFocus);
     setProfileDraftNote(profile.note);
     setProfileDraftLinkedSocials(profile.linkedSocials);
+    setProfileDraftPhotoUri(profile.photoUri ?? "");
   }, [profile]);
 
   useEffect(() => {
@@ -151,6 +169,7 @@ export function ConnectionsScreen() {
     setDraftLocation(connection.location);
     setDraftTimezone(connection.timezone);
     setDraftPhotoLabel(connection.photoLabel);
+    setDraftPhotoUri(connection.photoUri ?? "");
     setDraftNote(connection.note);
     setDraftLinkedSocials(connection.linkedSocials);
     setDraftAccountStatus(connection.accountStatus);
@@ -164,6 +183,7 @@ export function ConnectionsScreen() {
     setDraftLocation("");
     setDraftTimezone("");
     setDraftPhotoLabel("");
+    setDraftPhotoUri("");
     setDraftNote("");
     setDraftLinkedSocials([]);
     setDraftAccountStatus("");
@@ -188,12 +208,7 @@ export function ConnectionsScreen() {
   };
 
   const saveConnection = () => {
-    if (
-      !draftName.trim() ||
-      !draftLocation.trim() ||
-      !draftTimezone.trim() ||
-      !draftNote.trim()
-    ) {
+    if (!draftName.trim() || !draftLocation.trim()) {
       return;
     }
 
@@ -206,10 +221,11 @@ export function ConnectionsScreen() {
       location: draftLocation.trim(),
       timezone: draftTimezone.trim(),
       photoLabel: draftPhotoLabel.trim(),
-      note: draftNote.trim(),
+      note: draftNote.trim() || "Add a little context about how you stay connected.",
       linkedSocials: draftLinkedSocials,
-      accountStatus: draftAccountStatus.trim() || "Account ready to connect",
+      accountStatus: draftAccountStatus.trim() || "Not connected yet",
       accent: existingConnection?.accent ?? "#FFF1E7",
+      photoUri: draftPhotoUri.trim() || undefined,
     };
 
     if (existingConnection) {
@@ -242,8 +258,27 @@ export function ConnectionsScreen() {
     );
   };
 
+  const uploadProfilePhoto = async () => {
+    const nextPhotoUri = await pickImageFromDevice();
+
+    if (nextPhotoUri) {
+      setProfileDraftPhotoUri(nextPhotoUri);
+    }
+  };
+
+  const uploadConnectionPhoto = async () => {
+    const nextPhotoUri = await pickImageFromDevice();
+
+    if (nextPhotoUri) {
+      setDraftPhotoUri(nextPhotoUri);
+      if (!draftPhotoLabel.trim()) {
+        setDraftPhotoLabel(`${draftName.trim() || "New"} profile photo`);
+      }
+    }
+  };
+
   const saveCurrentProfile = () => {
-    if (!profileDraftName.trim()) {
+    if (!profileDraftName.trim() || !profileDraftLocation.trim()) {
       return;
     }
 
@@ -252,8 +287,9 @@ export function ConnectionsScreen() {
       location: profileDraftLocation.trim(),
       timezone: profileDraftTimezone.trim(),
       relationshipFocus: profileDraftRelationshipFocus.trim(),
-      note: profileDraftNote.trim(),
+      note: profileDraftNote.trim() || "Building this space one relationship at a time.",
       linkedSocials: profileDraftLinkedSocials,
+      photoUri: profileDraftPhotoUri.trim() || undefined,
     };
 
     void saveProfile(nextProfile);
@@ -267,11 +303,17 @@ export function ConnectionsScreen() {
         subtitle="Personalize your side of the app so the experience reflects your own long-distance world"
       >
         <View style={styles.profileCard}>
-          <View style={[styles.photoPanel, { backgroundColor: palette.softSun }]}>
-            <Text style={styles.avatarInitial}>
-              {(profile.displayName || "Y").charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          {profile.photoUri ? (
+            <View style={styles.realPhotoPanel}>
+              <Image source={{ uri: profile.photoUri }} style={styles.profileImage} resizeMode="cover" />
+            </View>
+          ) : (
+            <View style={[styles.photoPanel, { backgroundColor: palette.softSun }]}>
+              <Text style={styles.avatarInitial}>
+                {(profile.displayName || "Y").charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
           <View style={styles.profileCopy}>
             <Text style={styles.profileName}>{profile.displayName}</Text>
             <Text style={styles.profileMeta}>
@@ -318,6 +360,9 @@ export function ConnectionsScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.inputStack}>
+              <Text style={styles.fieldLabel}>
+                Name <Text style={styles.requiredMark}>*</Text>
+              </Text>
               <TextInput
                 value={profileDraftName}
                 onChangeText={setProfileDraftName}
@@ -325,6 +370,9 @@ export function ConnectionsScreen() {
                 placeholderTextColor="#A08F89"
                 style={styles.textInput}
               />
+              <Text style={styles.fieldLabel}>
+                Location <Text style={styles.requiredMark}>*</Text>
+              </Text>
               <TextInput
                 value={profileDraftLocation}
                 onChangeText={setProfileDraftLocation}
@@ -346,6 +394,7 @@ export function ConnectionsScreen() {
                   ))}
                 </View>
               ) : null}
+              <Text style={styles.fieldLabel}>Timezone</Text>
               <TextInput
                 value={profileDraftTimezone}
                 onChangeText={setProfileDraftTimezone}
@@ -353,6 +402,22 @@ export function ConnectionsScreen() {
                 placeholderTextColor="#A08F89"
                 style={styles.textInput}
               />
+              <Text style={styles.fieldLabel}>Profile photo</Text>
+              <Text style={styles.fieldHelper}>
+                Upload from your computer or phone browser to personalize your card.
+              </Text>
+              <View style={styles.uploadRow}>
+                <TouchableOpacity style={styles.secondaryButton} onPress={() => void uploadProfilePhoto()}>
+                  <Text style={styles.secondaryButtonText}>
+                    {profileDraftPhotoUri ? "Replace photo" : "Upload photo"}
+                  </Text>
+                </TouchableOpacity>
+                {profileDraftPhotoUri ? (
+                  <TouchableOpacity style={styles.ghostAction} onPress={() => setProfileDraftPhotoUri("")}>
+                    <Text style={styles.ghostActionText}>Remove</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
               <TextInput
                 value={profileDraftRelationshipFocus}
                 onChangeText={setProfileDraftRelationshipFocus}
@@ -361,14 +426,37 @@ export function ConnectionsScreen() {
                 style={[styles.textInput, styles.detailInput]}
                 multiline
               />
-              <TextInput
-                value={profileDraftNote}
-                onChangeText={setProfileDraftNote}
-                placeholder="A note about how you want to use the app"
-                placeholderTextColor="#A08F89"
-                style={[styles.textInput, styles.detailInput]}
-                multiline
-              />
+              <Text style={styles.fieldLabel}>Profile note</Text>
+              <Text style={styles.fieldHelper}>
+                This helps explain what kind of shared space you want to build.
+              </Text>
+              <View style={styles.selectWrap}>
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => setOpenProfileNoteMenu((current) => !current)}
+                >
+                  <Text style={[styles.selectButtonText, !profileDraftNote && styles.selectPlaceholder]}>
+                    {profileDraftNote || "Choose a profile note"}
+                  </Text>
+                  <Text style={styles.selectChevron}>{openProfileNoteMenu ? "▲" : "▼"}</Text>
+                </TouchableOpacity>
+                {openProfileNoteMenu ? (
+                  <View style={styles.optionList}>
+                    {profileNoteOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option}
+                        style={styles.optionRow}
+                        onPress={() => {
+                          setProfileDraftNote(option);
+                          setOpenProfileNoteMenu(false);
+                        }}
+                      >
+                        <Text style={styles.optionText}>{option}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
               <Text style={styles.accountLabel}>Linked socials</Text>
               <View style={styles.chipWrap}>
                 {socialPlatforms.map((platform) => (
@@ -405,10 +493,10 @@ export function ConnectionsScreen() {
 
         {filteredConnections.map((connection) => (
           <View key={connection.id} style={styles.profileCard}>
-            {profileImages[connection.id] ? (
+            {connection.photoUri || profileImages[connection.id] ? (
               <View style={styles.realPhotoPanel}>
                 <Image
-                  source={profileImages[connection.id]}
+                  source={connection.photoUri ? { uri: connection.photoUri } : profileImages[connection.id]}
                   style={styles.profileImage}
                   resizeMode="cover"
                 />
@@ -487,6 +575,9 @@ export function ConnectionsScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.inputStack}>
+              <Text style={styles.fieldLabel}>
+                Name <Text style={styles.requiredMark}>*</Text>
+              </Text>
               <TextInput
                 value={draftName}
                 onChangeText={setDraftName}
@@ -504,6 +595,9 @@ export function ConnectionsScreen() {
                   />
                 ))}
               </View>
+              <Text style={styles.fieldLabel}>
+                Location <Text style={styles.requiredMark}>*</Text>
+              </Text>
               <TextInput
                 value={draftLocation}
                 onChangeText={setDraftLocation}
@@ -525,6 +619,7 @@ export function ConnectionsScreen() {
                   ))}
                 </View>
               ) : null}
+              <Text style={styles.fieldLabel}>Timezone</Text>
               <TextInput
                 value={draftTimezone}
                 onChangeText={setDraftTimezone}
@@ -532,6 +627,22 @@ export function ConnectionsScreen() {
                 placeholderTextColor="#A08F89"
                 style={styles.textInput}
               />
+              <Text style={styles.fieldLabel}>Profile photo</Text>
+              <Text style={styles.fieldHelper}>
+                Upload a photo from your computer or phone browser for this person.
+              </Text>
+              <View style={styles.uploadRow}>
+                <TouchableOpacity style={styles.secondaryButton} onPress={() => void uploadConnectionPhoto()}>
+                  <Text style={styles.secondaryButtonText}>
+                    {draftPhotoUri ? "Replace photo" : "Upload photo"}
+                  </Text>
+                </TouchableOpacity>
+                {draftPhotoUri ? (
+                  <TouchableOpacity style={styles.ghostAction} onPress={() => setDraftPhotoUri("")}>
+                    <Text style={styles.ghostActionText}>Remove</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
               <TextInput
                 value={draftPhotoLabel}
                 onChangeText={setDraftPhotoLabel}
@@ -539,21 +650,68 @@ export function ConnectionsScreen() {
                 placeholderTextColor="#A08F89"
                 style={styles.textInput}
               />
-              <TextInput
-                value={draftNote}
-                onChangeText={setDraftNote}
-                placeholder="Profile note"
-                placeholderTextColor="#A08F89"
-                style={[styles.textInput, styles.detailInput]}
-                multiline
-              />
-              <TextInput
-                value={draftAccountStatus}
-                onChangeText={setDraftAccountStatus}
-                placeholder="Account sync status"
-                placeholderTextColor="#A08F89"
-                style={styles.textInput}
-              />
+              <Text style={styles.fieldLabel}>Profile note</Text>
+              <Text style={styles.fieldHelper}>
+                This is the quick relationship context shown on their card.
+              </Text>
+              <View style={styles.selectWrap}>
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => setOpenConnectionNoteMenu((current) => !current)}
+                >
+                  <Text style={[styles.selectButtonText, !draftNote && styles.selectPlaceholder]}>
+                    {draftNote || "Choose a profile note"}
+                  </Text>
+                  <Text style={styles.selectChevron}>{openConnectionNoteMenu ? "▲" : "▼"}</Text>
+                </TouchableOpacity>
+                {openConnectionNoteMenu ? (
+                  <View style={styles.optionList}>
+                    {profileNoteOptions.map((option) => (
+                      <TouchableOpacity
+                        key={`connection-${option}`}
+                        style={styles.optionRow}
+                        onPress={() => {
+                          setDraftNote(option);
+                          setOpenConnectionNoteMenu(false);
+                        }}
+                      >
+                        <Text style={styles.optionText}>{option}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+              <Text style={styles.fieldLabel}>Account sync status</Text>
+              <Text style={styles.fieldHelper}>
+                Use this to show what outside context is already connected for this person.
+              </Text>
+              <View style={styles.selectWrap}>
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => setOpenAccountStatusMenu((current) => !current)}
+                >
+                  <Text style={[styles.selectButtonText, !draftAccountStatus && styles.selectPlaceholder]}>
+                    {draftAccountStatus || "Choose account sync status"}
+                  </Text>
+                  <Text style={styles.selectChevron}>{openAccountStatusMenu ? "▲" : "▼"}</Text>
+                </TouchableOpacity>
+                {openAccountStatusMenu ? (
+                  <View style={styles.optionList}>
+                    {accountStatusOptions.map((option) => (
+                      <TouchableOpacity
+                        key={option}
+                        style={styles.optionRow}
+                        onPress={() => {
+                          setDraftAccountStatus(option);
+                          setOpenAccountStatusMenu(false);
+                        }}
+                      >
+                        <Text style={styles.optionText}>{option}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
               <Text style={styles.accountLabel}>Connect accounts</Text>
               <View style={styles.chipWrap}>
                 {socialPlatforms.map((platform) => (
@@ -776,6 +934,20 @@ const styles = StyleSheet.create({
   inputStack: {
     gap: 10,
   },
+  fieldLabel: {
+    color: palette.text,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  requiredMark: {
+    color: palette.berry,
+  },
+  fieldHelper: {
+    color: palette.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: -4,
+  },
   textInput: {
     borderRadius: 18,
     borderWidth: 1,
@@ -789,6 +961,52 @@ const styles = StyleSheet.create({
   detailInput: {
     minHeight: 84,
     textAlignVertical: "top",
+  },
+  selectWrap: {
+    gap: 8,
+  },
+  selectButton: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  },
+  selectButtonText: {
+    color: palette.text,
+    fontSize: 14,
+    flex: 1,
+  },
+  selectPlaceholder: {
+    color: "#A08F89",
+  },
+  selectChevron: {
+    color: palette.berry,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  optionList: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.line,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+  },
+  optionRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F5E8E2",
+  },
+  optionText: {
+    color: palette.text,
+    fontSize: 14,
+    lineHeight: 20,
   },
   suggestionList: {
     borderRadius: 18,
@@ -823,6 +1041,22 @@ const styles = StyleSheet.create({
     color: palette.text,
     fontSize: 13,
     fontWeight: "700",
+  },
+  uploadRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  ghostAction: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  ghostActionText: {
+    color: palette.berry,
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   primaryButton: {
     backgroundColor: palette.text,

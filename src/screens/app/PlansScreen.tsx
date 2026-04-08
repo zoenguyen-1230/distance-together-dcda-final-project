@@ -4,7 +4,7 @@ import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
 import { dateIdeas, smartCallWindows } from "../../data/mockData";
-import { useAuth } from "../../providers/AuthProvider";
+import { useAppData } from "../../providers/AppDataProvider";
 import { palette } from "../../theme/palette";
 
 const alternateWindowsByPerson: Record<string, string[]> = {
@@ -23,13 +23,60 @@ const alternateWindowsByPerson: Record<string, string[]> = {
   ],
 };
 
+function buildDefaultCallWindows(name: string, timezone: string) {
+  const timezoneLabel = timezone || "their timezone";
+
+  return [
+    {
+      id: `call-${name.toLowerCase().replace(/\s+/g, "-")}-steady`,
+      person: name,
+      energyFit: "steady" as const,
+      title: `Best overlap this week: 8:00 PM your time / ${timezoneLabel}`,
+      detail: `A balanced evening window for ${name} that aims to avoid work, class, and calendar overlap.`,
+      confidence: "Shared opening",
+    },
+    {
+      id: `call-${name.toLowerCase().replace(/\s+/g, "-")}-low`,
+      person: name,
+      energyFit: "low" as const,
+      title: `Low-pressure check-in: 12:30 PM your time / ${timezoneLabel}`,
+      detail: `A shorter midday slot when you both may only have space for a quick catch-up or voice note.`,
+      confidence: "Low effort",
+    },
+  ];
+}
+
+function buildAlternateWindows(name: string, timezone: string) {
+  return (
+    alternateWindowsByPerson[name] ?? [
+      `Tuesday 7:00 PM your time / ${timezone || "their timezone"}`,
+      `Thursday 8:30 PM your time / ${timezone || "their timezone"}`,
+      `Sunday 11:00 AM your time / ${timezone || "their timezone"}`,
+    ]
+  );
+}
+
 export function PlansScreen() {
-  const { isDemoMode } = useAuth();
-  const liveCallWindows = isDemoMode ? smartCallWindows : [];
+  const { connections } = useAppData();
+  const liveCallWindows = useMemo(() => {
+    if (!connections.length) {
+      return [];
+    }
+
+    return connections.flatMap((connection) => {
+      const matchingSeedWindows = smartCallWindows.filter(
+        (slot) => slot.person.toLowerCase() === connection.name.toLowerCase()
+      );
+
+      return matchingSeedWindows.length
+        ? matchingSeedWindows
+        : buildDefaultCallWindows(connection.name, connection.timezone);
+    });
+  }, [connections]);
   const [selectedDateIdea, setSelectedDateIdea] = useState(dateIdeas[0]);
   const [dateIdeaRolls, setDateIdeaRolls] = useState(1);
   const [savedDateIdeas, setSavedDateIdeas] = useState<string[]>([]);
-  const [selectedPerson, setSelectedPerson] = useState(liveCallWindows[0]?.person ?? "");
+  const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedEnergy, setSelectedEnergy] = useState<"all" | "low" | "steady" | "high">(
     "steady"
   );
@@ -46,7 +93,26 @@ export function PlansScreen() {
     [liveCallWindows, selectedEnergy, selectedPerson]
   );
 
-  const alternateWindows = alternateWindowsByPerson[selectedPerson] ?? [];
+  const selectedConnection = connections.find((connection) => connection.name === selectedPerson);
+  const alternateWindows = buildAlternateWindows(
+    selectedPerson,
+    selectedConnection?.timezone ?? ""
+  );
+
+  React.useEffect(() => {
+    if (!selectedPerson && liveCallWindows[0]?.person) {
+      setSelectedPerson(liveCallWindows[0].person);
+      return;
+    }
+
+    if (
+      selectedPerson &&
+      !liveCallWindows.some((slot) => slot.person === selectedPerson) &&
+      liveCallWindows[0]?.person
+    ) {
+      setSelectedPerson(liveCallWindows[0].person);
+    }
+  }, [liveCallWindows, selectedPerson]);
 
   const rollDateIdea = () => {
     if (dateIdeas.length === 1) {
