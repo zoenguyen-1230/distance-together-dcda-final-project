@@ -4,12 +4,28 @@ import { socialPlatforms } from "../../data/mockData";
 import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
+import { hasSupabaseCredentials } from "../../config/env";
 import { locationDirectory } from "../../data/locationDirectory";
 import { pickImageFromDevice } from "../../lib/pickImageFromDevice";
+import {
+  acceptRelationshipInvite,
+  declineRelationshipInvite,
+  fetchIncomingInvites,
+  fetchSentInvites,
+  fetchSharedConnections,
+  isSharedConnection,
+  sendRelationshipInvite,
+} from "../../lib/sharedRelationships";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppData } from "../../providers/AppDataProvider";
 import { useProfile } from "../../providers/ProfileProvider";
-import { Connection, ConnectionFilter, CurrentUserProfile, SocialPlatform } from "../../types";
+import {
+  Connection,
+  ConnectionFilter,
+  CurrentUserProfile,
+  RelationshipInvite,
+  SocialPlatform,
+} from "../../types";
 import { palette } from "../../theme/palette";
 import { typography } from "../../theme/typography";
 
@@ -43,7 +59,7 @@ const socialVisuals: Record<
   BeReal: { glyph: "Be", background: "#FFF3D9", color: "#111111" },
 };
 export function ConnectionsScreen() {
-  const { isDemoMode } = useAuth();
+  const { isDemoMode, user, userEmail } = useAuth();
   const { connections, setConnections } = useAppData();
   const { profile, saveProfile } = useProfile();
   const [selectedFilter, setSelectedFilter] = useState<ConnectionFilter>(
@@ -78,6 +94,14 @@ export function ConnectionsScreen() {
   const [draftAccountStatus, setDraftAccountStatus] = useState("");
   const [openConnectionNoteMenu, setOpenConnectionNoteMenu] = useState(false);
   const [openAccountStatusMenu, setOpenAccountStatusMenu] = useState(false);
+  const [incomingInvites, setIncomingInvites] = useState<RelationshipInvite[]>([]);
+  const [sentInvites, setSentInvites] = useState<RelationshipInvite[]>([]);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRelationshipType, setInviteRelationshipType] = useState<ConnectionFilter>("partner");
+  const [inviteNote, setInviteNote] = useState("");
+  const [inviteFeedback, setInviteFeedback] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   const filteredConnections = useMemo(
     () =>
@@ -87,6 +111,10 @@ export function ConnectionsScreen() {
           : connection.relationshipType === selectedFilter
       ),
     [connections, selectedFilter]
+  );
+  const sharedConnections = useMemo(
+    () => connections.filter((connection) => isSharedConnection(connection.id)),
+    [connections]
   );
   const profileLocationSuggestions = useMemo(() => {
     const query = profileDraftLocation.trim().toLowerCase();
@@ -118,6 +146,30 @@ export function ConnectionsScreen() {
     setEditorVisible(false);
     setSelectedPersonId("");
   }, [isDemoMode]);
+
+  useEffect(() => {
+    const loadInvites = async () => {
+      if (!user?.id || !userEmail || !hasSupabaseCredentials || isDemoMode) {
+        setIncomingInvites([]);
+        setSentInvites([]);
+        return;
+      }
+
+      try {
+        const [incoming, sent] = await Promise.all([
+          fetchIncomingInvites(userEmail),
+          fetchSentInvites(user.id),
+        ]);
+        setIncomingInvites(incoming.filter((invite) => invite.status === "pending"));
+        setSentInvites(sent);
+      } catch {
+        setIncomingInvites([]);
+        setSentInvites([]);
+      }
+    };
+
+    void loadInvites();
+  }, [isDemoMode, user?.id, userEmail]);
 
   useEffect(() => {
     setProfileDraftName(profile.displayName);
@@ -240,6 +292,72 @@ export function ConnectionsScreen() {
     }
 
     setEditorVisible(false);
+  };
+
+  const syncSharedConnections = async () => {
+    if (!user?.id || !hasSupabaseCredentials) {
+      return;
+    }
+
+    const nextSharedConnections = await fetchSharedConnections(user.id).catch(() => []);
+    setConnections((current) => {
+      const localConnections = current.filter((connection) => !isSharedConnection(connection.id));
+      return [...localConnections, ...nextSharedConnections];
+    });
+  };
+
+  const submitInvite = async () => {
+    if (
+      !user?.id ||
+      !userEmail ||
+      !inviteEmail.trim() ||
+      inviteRelationshipType === "all" ||
+      !hasSupabaseCredentials
+    ) {
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteFeedback("");
+
+    try {
+      await sendRelationshipInvite({
+        senderId: user.id,
+        recipientEmail: inviteEmail,
+        recipientName: inviteName,
+        relationshipType: inviteRelationshipType,
+        note: inviteNote,
+      });
+      setInviteFeedback(`Invite sent to ${inviteEmail.trim().toLowerCase()}.`);
+      setInviteName("");
+      setInviteEmail("");
+      setInviteNote("");
+      const nextSentInvites = await fetchSentInvites(user.id);
+      setSentInvites(nextSentInvites);
+    } catch (error) {
+      setInviteFeedback(error instanceof Error ? error.message : "Invite could not be sent.");
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleAcceptInvite = async (inviteId: string) => {
+    try {
+      await acceptRelationshipInvite(inviteId);
+      setIncomingInvites((current) => current.filter((invite) => invite.id !== inviteId));
+      await syncSharedConnections();
+    } catch (error) {
+      setInviteFeedback(error instanceof Error ? error.message : "Invite could not be accepted.");
+    }
+  };
+
+  const handleDeclineInvite = async (inviteId: string) => {
+    try {
+      await declineRelationshipInvite(inviteId);
+      setIncomingInvites((current) => current.filter((invite) => invite.id !== inviteId));
+    } catch (error) {
+      setInviteFeedback(error instanceof Error ? error.message : "Invite could not be declined.");
+    }
   };
 
   const applyProfileLocationSuggestion = (locationLabel: string) => {
@@ -541,9 +659,13 @@ export function ConnectionsScreen() {
                   );
                 })}
               </View>
-              <TouchableOpacity onPress={() => loadConnection(connection.id)}>
-                <Text style={styles.editLink}>Edit profile</Text>
-              </TouchableOpacity>
+              {!isSharedConnection(connection.id) ? (
+                <TouchableOpacity onPress={() => loadConnection(connection.id)}>
+                  <Text style={styles.editLink}>Edit profile</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.profileSubtle}>Connected through a shared Same Time space</Text>
+              )}
             </View>
           </View>
         ))}
@@ -732,6 +854,146 @@ export function ConnectionsScreen() {
             </TouchableOpacity>
           </View>
         ) : null}
+      </SectionCard>
+
+      <SectionCard
+        title="Shared spaces"
+        subtitle="Invite someone by email so their account can connect into a real shared Same Time space"
+        variant="memory"
+      >
+        {hasSupabaseCredentials && !isDemoMode ? (
+          <>
+            <View style={styles.editorCard}>
+              <View style={styles.editorHeader}>
+                <Text style={styles.feedTitle}>Invite someone into Same Time</Text>
+              </View>
+              <View style={styles.inputStack}>
+                <Text style={styles.fieldLabel}>Their name</Text>
+                <TextInput
+                  value={inviteName}
+                  onChangeText={setInviteName}
+                  placeholder="Sean"
+                  placeholderTextColor="#A08F89"
+                  style={styles.textInput}
+                />
+                <Text style={styles.fieldLabel}>
+                  Their email <Text style={styles.requiredMark}>*</Text>
+                </Text>
+                <TextInput
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  placeholder="name@example.com"
+                  placeholderTextColor="#A08F89"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  style={styles.textInput}
+                />
+                <Text style={styles.fieldLabel}>
+                  Relationship type <Text style={styles.requiredMark}>*</Text>
+                </Text>
+                <View style={styles.chipWrap}>
+                  {["partner", "friend", "family"].map((type) => (
+                    <FilterChip
+                      key={`invite-${type}`}
+                      label={capitalize(type)}
+                      active={inviteRelationshipType === type}
+                      onPress={() => setInviteRelationshipType(type as ConnectionFilter)}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.fieldLabel}>Invite note</Text>
+                <TextInput
+                  value={inviteNote}
+                  onChangeText={setInviteNote}
+                  placeholder="A gentle note about what you want to build together"
+                  placeholderTextColor="#A08F89"
+                  style={[styles.textInput, styles.detailInput]}
+                  multiline
+                />
+                {inviteFeedback ? <Text style={styles.fieldHelper}>{inviteFeedback}</Text> : null}
+              </View>
+              <TouchableOpacity style={styles.primaryButton} onPress={() => void submitInvite()}>
+                <Text style={styles.primaryButtonText}>
+                  {inviteLoading ? "Sending..." : "Send invite"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {incomingInvites.length ? (
+              <View style={styles.editorCard}>
+                <Text style={styles.feedTitle}>Incoming invites</Text>
+                <View style={styles.feedStack}>
+                  {incomingInvites.map((invite) => (
+                    <View key={invite.id} style={styles.feedCard}>
+                      <View style={styles.feedCopy}>
+                        <Text style={styles.feedTitle}>
+                          {invite.senderName} invited you as {capitalize(invite.relationshipType)}
+                        </Text>
+                        <Text style={styles.feedMeta}>
+                          {invite.note || "Open a shared Same Time space together."}
+                        </Text>
+                      </View>
+                      <View style={styles.actionRow}>
+                        <TouchableOpacity
+                          style={styles.secondaryButton}
+                          onPress={() => void handleAcceptInvite(invite.id)}
+                        >
+                          <Text style={styles.secondaryButtonText}>Accept</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.ghostAction}
+                          onPress={() => void handleDeclineInvite(invite.id)}
+                        >
+                          <Text style={styles.ghostActionText}>Decline</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {sentInvites.length ? (
+              <View style={styles.editorCard}>
+                <Text style={styles.feedTitle}>Sent invites</Text>
+                <View style={styles.feedStack}>
+                  {sentInvites.map((invite) => (
+                    <View key={invite.id} style={styles.feedCard}>
+                      <View style={styles.feedCopy}>
+                        <Text style={styles.feedTitle}>
+                          {invite.recipientName || invite.recipientEmail}
+                        </Text>
+                        <Text style={styles.feedMeta}>
+                          {capitalize(invite.relationshipType)} invite • {capitalize(invite.status)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
+
+            {sharedConnections.length ? (
+              <View style={styles.feedCard}>
+                <View style={styles.feedCopy}>
+                  <Text style={styles.feedTitle}>Shared spaces live here now</Text>
+                  <Text style={styles.feedMeta}>
+                    Accepted people appear in your people list and begin moving Same Time toward real shared spaces.
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+          </>
+        ) : (
+          <View style={styles.feedCard}>
+            <View style={styles.feedCopy}>
+              <Text style={styles.feedTitle}>Shared invites appear on real accounts</Text>
+              <Text style={styles.feedMeta}>
+                Sign into a live Supabase-backed account to invite someone into a shared Same Time space.
+              </Text>
+            </View>
+          </View>
+        )}
       </SectionCard>
 
       <SectionCard
@@ -934,6 +1196,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.line,
     padding: 14,
+  },
+  feedStack: {
+    gap: 10,
   },
   editorHeader: {
     flexDirection: "row",

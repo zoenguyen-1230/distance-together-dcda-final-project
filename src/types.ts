@@ -38,6 +38,18 @@ export interface Connection {
   photoUri?: string;
 }
 
+export interface RelationshipInvite {
+  id: string;
+  senderId: string;
+  senderName: string;
+  recipientEmail: string;
+  recipientName: string;
+  relationshipType: RelationshipType;
+  note: string;
+  status: "pending" | "accepted" | "declined" | "canceled";
+  createdAt: string;
+}
+
 export interface CurrentUserProfile {
   displayName: string;
   location: string;

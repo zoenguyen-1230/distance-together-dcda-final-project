@@ -37,6 +37,7 @@ import {
   VisitPlan,
 } from "../types";
 import { loadWorkspaceState, saveWorkspaceAppData, type StoredAppData } from "../lib/workspaceState";
+import { fetchSharedConnections, isSharedConnection } from "../lib/sharedRelationships";
 import { useAuth } from "./AuthProvider";
 
 interface AppDataContextValue {
@@ -127,6 +128,20 @@ function buildDefaultData(mode: "filled" | "blank"): StoredAppData {
   };
 }
 
+function mergeConnections(localConnections: Connection[], sharedConnections: Connection[]) {
+  const byId = new Map<string, Connection>();
+
+  [...localConnections, ...sharedConnections].forEach((connection) => {
+    byId.set(connection.id, connection);
+  });
+
+  return Array.from(byId.values());
+}
+
+function withoutSharedConnections(connections: Connection[]) {
+  return connections.filter((connection) => !isSharedConnection(connection.id));
+}
+
 export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const { user, userEmail, previewMode, isDemoMode } = useAuth();
   const storageKey = getStorageKey(userEmail, previewMode);
@@ -154,12 +169,16 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
       try {
         if (shouldUseSupabaseState && user?.id) {
+          const sharedConnections = await fetchSharedConnections(user.id).catch(() => []);
           const workspace = await loadWorkspaceState(user.id);
           const parsed = workspace?.app_data;
 
           if (parsed) {
+            const localConnections = Array.isArray(parsed.connections)
+              ? (parsed.connections as Connection[])
+              : [];
             startTransition(() => {
-              setConnections(Array.isArray(parsed.connections) ? (parsed.connections as Connection[]) : []);
+              setConnections(mergeConnections(localConnections, sharedConnections));
               setJournalEntries(
                 Array.isArray(parsed.journalEntries) ? (parsed.journalEntries as JournalEntry[]) : []
               );
@@ -205,7 +224,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
           const blankWorkspace = buildDefaultData("blank");
           startTransition(() => {
-            setConnections(blankWorkspace.connections);
+            setConnections(mergeConnections(blankWorkspace.connections, sharedConnections));
             setJournalEntries(blankWorkspace.journalEntries);
             setTimeCapsules(blankWorkspace.timeCapsules);
             setCalendarEvents(blankWorkspace.calendarEvents);
@@ -307,7 +326,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     }
 
     const payload: StoredAppData = {
-      connections,
+      connections: withoutSharedConnections(connections),
       journalEntries,
       timeCapsules,
       calendarEvents,
