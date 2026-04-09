@@ -444,7 +444,7 @@ export function ChatScreen() {
                       >
                         <Text style={styles.messageMeta}>
                           {message.author === "self"
-                            ? profile.displayName || "You"
+                            ? "You"
                             : selectedConnection?.name || "Your person"}{" "}
                           | {message.type}
                         </Text>

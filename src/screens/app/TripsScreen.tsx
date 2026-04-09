@@ -352,12 +352,12 @@ export function TripsScreen() {
 
     return Array.from(
       new Set([
-        profile.displayName?.trim() || "You",
+        "You",
         ...participantNames,
         "Split",
       ].filter(Boolean))
     );
-  }, [profile.displayName, selectedBudgetPlan]);
+  }, [selectedBudgetPlan, liveConnections]);
 
   const visibleWeatherForecasts = useMemo(
     () =>

@@ -305,7 +305,7 @@ export function HomeScreen() {
             Mood: {myMood} | Energy: {myEnergy} | Health: {myHealth}
           </Text>
           <Text style={styles.feedSubtle}>
-            Sharing as {profile.displayName}
+            Sharing as You
             {profile.location ? ` • ${profile.location}` : ""}
             {profile.timezone ? ` • ${profile.timezone}` : ""}
           </Text>
