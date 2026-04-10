@@ -66,39 +66,22 @@ const toolkitSectionById: Record<string, ToolkitSectionKey> = {
   "toolkit-3": "packing",
   "toolkit-4": "budget",
 };
-const itineraryTimeOptions = [
-  "7:00 AM",
-  "7:30 AM",
-  "8:00 AM",
-  "8:30 AM",
-  "9:00 AM",
-  "9:30 AM",
-  "10:00 AM",
-  "10:30 AM",
-  "11:00 AM",
-  "11:30 AM",
-  "12:00 PM",
-  "12:30 PM",
-  "1:00 PM",
-  "1:30 PM",
-  "2:00 PM",
-  "2:30 PM",
-  "3:00 PM",
-  "3:30 PM",
-  "4:00 PM",
-  "4:30 PM",
-  "5:00 PM",
-  "5:30 PM",
-  "6:00 PM",
-  "6:30 PM",
-  "7:00 PM",
-  "7:30 PM",
-  "8:00 PM",
-  "8:30 PM",
-  "9:00 PM",
-  "9:30 PM",
-  "10:00 PM",
-];
+
+function buildTimeOptions() {
+  const options: string[] = [];
+
+  for (let minutes = 0; minutes < 24 * 60; minutes += 30) {
+    const hours24 = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const suffix = hours24 >= 12 ? "PM" : "AM";
+    const hours12 = hours24 % 12 || 12;
+    options.push(`${hours12}:${String(mins).padStart(2, "0")} ${suffix}`);
+  }
+
+  return options;
+}
+
+const itineraryTimeOptions = buildTimeOptions();
 
 function getDaysAway(dateValue: string) {
   const tripDate = new Date(`${dateValue}T12:00:00`);
@@ -2025,18 +2008,24 @@ export function TripsScreen() {
                         </TouchableOpacity>
                         {openItineraryStartTimeMenu ? (
                           <View style={styles.optionList}>
-                            {itineraryTimeOptions.map((timeOption) => (
-                              <TouchableOpacity
-                                key={`start-${timeOption}`}
-                                style={styles.optionRow}
-                                onPress={() => {
-                                  setDraftItineraryStartTime(timeOption);
-                                  setOpenItineraryStartTimeMenu(false);
-                                }}
-                              >
-                                <Text style={styles.optionText}>{timeOption}</Text>
-                              </TouchableOpacity>
-                            ))}
+                            <ScrollView
+                              style={styles.scrollOptionList}
+                              nestedScrollEnabled
+                              showsVerticalScrollIndicator
+                            >
+                              {itineraryTimeOptions.map((timeOption) => (
+                                <TouchableOpacity
+                                  key={`start-${timeOption}`}
+                                  style={styles.optionRow}
+                                  onPress={() => {
+                                    setDraftItineraryStartTime(timeOption);
+                                    setOpenItineraryStartTimeMenu(false);
+                                  }}
+                                >
+                                  <Text style={styles.optionText}>{timeOption}</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
                           </View>
                         ) : null}
                       </View>
@@ -2054,18 +2043,24 @@ export function TripsScreen() {
                         </TouchableOpacity>
                         {openItineraryEndTimeMenu ? (
                           <View style={styles.optionList}>
-                            {itineraryTimeOptions.map((timeOption) => (
-                              <TouchableOpacity
-                                key={`end-${timeOption}`}
-                                style={styles.optionRow}
-                                onPress={() => {
-                                  setDraftItineraryEndTime(timeOption);
-                                  setOpenItineraryEndTimeMenu(false);
-                                }}
-                              >
-                                <Text style={styles.optionText}>{timeOption}</Text>
-                              </TouchableOpacity>
-                            ))}
+                            <ScrollView
+                              style={styles.scrollOptionList}
+                              nestedScrollEnabled
+                              showsVerticalScrollIndicator
+                            >
+                              {itineraryTimeOptions.map((timeOption) => (
+                                <TouchableOpacity
+                                  key={`end-${timeOption}`}
+                                  style={styles.optionRow}
+                                  onPress={() => {
+                                    setDraftItineraryEndTime(timeOption);
+                                    setOpenItineraryEndTimeMenu(false);
+                                  }}
+                                >
+                                  <Text style={styles.optionText}>{timeOption}</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
                           </View>
                         ) : null}
                       </View>
@@ -3770,6 +3765,9 @@ const styles = StyleSheet.create({
     borderColor: palette.line,
     backgroundColor: "#FFFFFF",
     overflow: "hidden",
+  },
+  scrollOptionList: {
+    maxHeight: 240,
   },
   optionRow: {
     paddingHorizontal: 14,
