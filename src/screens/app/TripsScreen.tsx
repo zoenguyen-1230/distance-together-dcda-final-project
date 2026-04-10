@@ -277,16 +277,17 @@ export function TripsScreen() {
   const isEditingExistingTrip = !isCreatingTrip && selectedTripId !== "";
 
   const registerToolkitSection = (section: ToolkitSectionKey, y: number) => {
-    toolkitSectionOffsets.current[section] =
-      toolkitCardOffset.current + toolkitBodyOffset.current + y;
+    toolkitSectionOffsets.current[section] = y;
   };
 
   const jumpToToolkitSection = (section: ToolkitSectionKey) => {
-    const offset = toolkitSectionOffsets.current[section];
+    const localOffset = toolkitSectionOffsets.current[section];
 
-    if (typeof offset !== "number") {
+    if (typeof localOffset !== "number") {
       return;
     }
+
+    const offset = toolkitCardOffset.current + toolkitBodyOffset.current + localOffset;
 
     tripsScrollRef.current?.scrollTo({
       y: Math.max(offset - 28, 0),
