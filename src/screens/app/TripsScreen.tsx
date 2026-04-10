@@ -305,7 +305,7 @@ function formatTripDayLabel(dateValue: string) {
 export function TripsScreen() {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const {
     connections,
     visitPlans,
@@ -442,6 +442,7 @@ export function TripsScreen() {
     "fahrenheit"
   );
   const tripsScrollRef = useRef<ScrollView | null>(null);
+  const itineraryTimelineScrollRef = useRef<ScrollView | null>(null);
   const toolkitSectionOffsets = useRef<Partial<Record<ToolkitSectionKey, number>>>({});
   const toolkitCardOffset = useRef(0);
   const toolkitBodyOffset = useRef(0);
@@ -562,15 +563,8 @@ export function TripsScreen() {
 
     scheduled.sort((left, right) => left.startMinutes - right.startMinutes);
 
-    const defaultStartHour = 8;
-    const defaultEndHour = 22;
-    const earliestHour = scheduled.length
-      ? Math.max(defaultStartHour, Math.floor(scheduled[0].startMinutes / 60) - 1)
-      : defaultStartHour;
-    const latestMinutes = scheduled.length
-      ? Math.max(...scheduled.map((entry) => entry.endMinutes))
-      : defaultEndHour * 60;
-    const latestHour = Math.max(defaultEndHour, Math.ceil(latestMinutes / 60) + 1);
+    const earliestHour = 0;
+    const latestHour = 23;
     const hours = Array.from(
       { length: latestHour - earliestHour + 1 },
       (_, index) => earliestHour + index
@@ -586,6 +580,12 @@ export function TripsScreen() {
   }, [activeItineraryDate, selectedVisitPlan?.startDate, visibleItinerary]);
   const itineraryTrackHeight = parsedItinerary.hours.length * 72;
   const itineraryEditorEstimatedHeight = isWideLayout ? 360 : 400;
+  const itineraryTimelineViewportHeight = isWideLayout
+    ? Math.min(Math.max(height - 260, 480), 760)
+    : Math.min(Math.max(height - 240, 360), 560);
+  const itineraryEditorMaxHeight = isWideLayout
+    ? Math.min(height - 120, 520)
+    : Math.min(height - 96, 460);
   const floatingItineraryEditorTop = useMemo(() => {
     if (!activeItineraryAnchor || activeItineraryAnchor.context !== "timeline") {
       return 16;
@@ -991,6 +991,17 @@ export function TripsScreen() {
     });
     setOpenEditItineraryStartTimeMenu(false);
     setOpenEditItineraryEndTimeMenu(false);
+
+    const anchorTop = anchor?.top;
+
+    if (anchor?.context === "timeline" && typeof anchorTop === "number") {
+      requestAnimationFrame(() => {
+        itineraryTimelineScrollRef.current?.scrollTo({
+          y: Math.max(0, anchorTop - 120),
+          animated: true,
+        });
+      });
+    }
   };
 
   const closeItineraryItemEditor = () => {
@@ -1858,159 +1869,167 @@ export function TripsScreen() {
         style={[
           styles.itineraryEventModal,
           variant === "floating" && styles.itineraryEventModalFloating,
+          variant === "floating" && { maxHeight: itineraryEditorMaxHeight },
         ]}
       >
-        <View style={styles.itineraryEventModalHeader}>
-          <View style={styles.itineraryEventModalHeaderCopy}>
-            <Text style={styles.itineraryEventModalEyebrow}>Calendar event</Text>
-            <Text style={styles.subsectionTitle}>Edit event</Text>
-            <Text style={styles.feedMeta}>
-              Update the day, time, title, details, or remove this block.
+        <ScrollView
+          style={styles.itineraryEventModalScroll}
+          contentContainerStyle={styles.itineraryEventModalScrollContent}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+        >
+          <View style={styles.itineraryEventModalHeader}>
+            <View style={styles.itineraryEventModalHeaderCopy}>
+              <Text style={styles.itineraryEventModalEyebrow}>Calendar event</Text>
+              <Text style={styles.subsectionTitle}>Edit event</Text>
+              <Text style={styles.feedMeta}>
+                Update the day, time, title, details, or remove this block.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.itineraryEventModalClose}
+              onPress={closeItineraryItemEditor}
+            >
+              <Text style={styles.itineraryEventModalCloseText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.inputStack}>
+            <Text style={styles.fieldLabel}>
+              Trip day <Text style={styles.requiredMark}>*</Text>
             </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.itineraryEventModalClose}
-            onPress={closeItineraryItemEditor}
-          >
-            <Text style={styles.itineraryEventModalCloseText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.inputStack}>
-          <Text style={styles.fieldLabel}>
-            Trip day <Text style={styles.requiredMark}>*</Text>
-          </Text>
-          <View style={styles.itineraryDatePicker}>
-            {itineraryDateOptions.map((dateValue) => (
-              <TouchableOpacity
-                key={`edit-date-${dateValue}`}
-                style={[
-                  styles.itineraryDateChip,
-                  editItineraryDate === dateValue && styles.itineraryDateChipActive,
-                ]}
-                onPress={() => setEditItineraryDate(dateValue)}
-                activeOpacity={0.9}
-              >
-                <Text
+            <View style={styles.itineraryDatePicker}>
+              {itineraryDateOptions.map((dateValue) => (
+                <TouchableOpacity
+                  key={`edit-date-${dateValue}`}
                   style={[
-                    styles.itineraryDateChipWeekday,
-                    editItineraryDate === dateValue && styles.itineraryDateChipWeekdayActive,
+                    styles.itineraryDateChip,
+                    editItineraryDate === dateValue && styles.itineraryDateChipActive,
                   ]}
+                  onPress={() => setEditItineraryDate(dateValue)}
+                  activeOpacity={0.9}
                 >
-                  {formatTripDayLabel(dateValue).split(" ")[0]}
-                </Text>
-                <Text
-                  style={[
-                    styles.itineraryDateChipDay,
-                    editItineraryDate === dateValue && styles.itineraryDateChipDayActive,
-                  ]}
+                  <Text
+                    style={[
+                      styles.itineraryDateChipWeekday,
+                      editItineraryDate === dateValue && styles.itineraryDateChipWeekdayActive,
+                    ]}
+                  >
+                    {formatTripDayLabel(dateValue).split(" ")[0]}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.itineraryDateChipDay,
+                      editItineraryDate === dateValue && styles.itineraryDateChipDayActive,
+                    ]}
+                  >
+                    {formatTripDayLabel(dateValue).split(" ").slice(1).join(" ")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.fieldLabel}>
+              Time range <Text style={styles.requiredMark}>*</Text>
+            </Text>
+            <View style={styles.itineraryTimeRow}>
+              <View style={[styles.selectWrap, styles.metaInput]}>
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => setOpenEditItineraryStartTimeMenu((current) => !current)}
                 >
-                  {formatTripDayLabel(dateValue).split(" ").slice(1).join(" ")}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <Text style={styles.fieldLabel}>
-            Time range <Text style={styles.requiredMark}>*</Text>
-          </Text>
-          <View style={styles.itineraryTimeRow}>
-            <View style={[styles.selectWrap, styles.metaInput]}>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setOpenEditItineraryStartTimeMenu((current) => !current)}
-              >
-                <Text style={styles.selectButtonText}>{editItineraryStartTime}</Text>
-                <Text style={styles.selectChevron}>
-                  {openEditItineraryStartTimeMenu ? "▲" : "▼"}
-                </Text>
-              </TouchableOpacity>
-              {openEditItineraryStartTimeMenu ? (
-                <View style={styles.optionList}>
-                  <ScrollView
-                    style={styles.scrollOptionList}
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator
-                  >
-                    {itineraryTimeOptions.map((timeOption) => (
-                      <TouchableOpacity
-                        key={`edit-start-${timeOption}`}
-                        style={styles.optionRow}
-                        onPress={() => {
-                          setEditItineraryStartTime(timeOption);
-                          setOpenEditItineraryStartTimeMenu(false);
-                        }}
-                      >
-                        <Text style={styles.optionText}>{timeOption}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null}
+                  <Text style={styles.selectButtonText}>{editItineraryStartTime}</Text>
+                  <Text style={styles.selectChevron}>
+                    {openEditItineraryStartTimeMenu ? "▲" : "▼"}
+                  </Text>
+                </TouchableOpacity>
+                {openEditItineraryStartTimeMenu ? (
+                  <View style={styles.optionList}>
+                    <ScrollView
+                      style={styles.scrollOptionList}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator
+                    >
+                      {itineraryTimeOptions.map((timeOption) => (
+                        <TouchableOpacity
+                          key={`edit-start-${timeOption}`}
+                          style={styles.optionRow}
+                          onPress={() => {
+                            setEditItineraryStartTime(timeOption);
+                            setOpenEditItineraryStartTimeMenu(false);
+                          }}
+                        >
+                          <Text style={styles.optionText}>{timeOption}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : null}
+              </View>
+              <View style={[styles.selectWrap, styles.metaInput]}>
+                <TouchableOpacity
+                  style={styles.selectButton}
+                  onPress={() => setOpenEditItineraryEndTimeMenu((current) => !current)}
+                >
+                  <Text style={styles.selectButtonText}>{editItineraryEndTime}</Text>
+                  <Text style={styles.selectChevron}>
+                    {openEditItineraryEndTimeMenu ? "▲" : "▼"}
+                  </Text>
+                </TouchableOpacity>
+                {openEditItineraryEndTimeMenu ? (
+                  <View style={styles.optionList}>
+                    <ScrollView
+                      style={styles.scrollOptionList}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator
+                    >
+                      {itineraryTimeOptions.map((timeOption) => (
+                        <TouchableOpacity
+                          key={`edit-end-${timeOption}`}
+                          style={styles.optionRow}
+                          onPress={() => {
+                            setEditItineraryEndTime(timeOption);
+                            setOpenEditItineraryEndTimeMenu(false);
+                          }}
+                        >
+                          <Text style={styles.optionText}>{timeOption}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : null}
+              </View>
             </View>
-            <View style={[styles.selectWrap, styles.metaInput]}>
-              <TouchableOpacity
-                style={styles.selectButton}
-                onPress={() => setOpenEditItineraryEndTimeMenu((current) => !current)}
-              >
-                <Text style={styles.selectButtonText}>{editItineraryEndTime}</Text>
-                <Text style={styles.selectChevron}>
-                  {openEditItineraryEndTimeMenu ? "▲" : "▼"}
-                </Text>
-              </TouchableOpacity>
-              {openEditItineraryEndTimeMenu ? (
-                <View style={styles.optionList}>
-                  <ScrollView
-                    style={styles.scrollOptionList}
-                    nestedScrollEnabled
-                    showsVerticalScrollIndicator
-                  >
-                    {itineraryTimeOptions.map((timeOption) => (
-                      <TouchableOpacity
-                        key={`edit-end-${timeOption}`}
-                        style={styles.optionRow}
-                        onPress={() => {
-                          setEditItineraryEndTime(timeOption);
-                          setOpenEditItineraryEndTimeMenu(false);
-                        }}
-                      >
-                        <Text style={styles.optionText}>{timeOption}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null}
-            </View>
+            <Text style={styles.fieldLabel}>
+              Title <Text style={styles.requiredMark}>*</Text>
+            </Text>
+            <TextInput
+              value={editItineraryTitle}
+              onChangeText={setEditItineraryTitle}
+              placeholder="Event title"
+              placeholderTextColor="#A08F89"
+              style={styles.textInput}
+            />
+            <Text style={styles.fieldLabel}>Details</Text>
+            <TextInput
+              value={editItineraryDetail}
+              onChangeText={setEditItineraryDetail}
+              placeholder="Optional notes"
+              placeholderTextColor="#A08F89"
+              style={[styles.textInput, styles.detailInput]}
+              multiline
+            />
           </View>
-          <Text style={styles.fieldLabel}>
-            Title <Text style={styles.requiredMark}>*</Text>
-          </Text>
-          <TextInput
-            value={editItineraryTitle}
-            onChangeText={setEditItineraryTitle}
-            placeholder="Event title"
-            placeholderTextColor="#A08F89"
-            style={styles.textInput}
-          />
-          <Text style={styles.fieldLabel}>Details</Text>
-          <TextInput
-            value={editItineraryDetail}
-            onChangeText={setEditItineraryDetail}
-            placeholder="Optional notes"
-            placeholderTextColor="#A08F89"
-            style={[styles.textInput, styles.detailInput]}
-            multiline
-          />
-        </View>
-        <View style={styles.itineraryEventModalActions}>
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => removeItineraryItem(activeItineraryItem.id)}
-          >
-            <Text style={styles.removeButtonText}>Remove</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryButton} onPress={saveItineraryItemEdits}>
-            <Text style={styles.primaryButtonText}>Save changes</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.itineraryEventModalActions}>
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => removeItineraryItem(activeItineraryItem.id)}
+            >
+              <Text style={styles.removeButtonText}>Remove</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.primaryButton} onPress={saveItineraryItemEdits}>
+              <Text style={styles.primaryButtonText}>Save changes</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
     );
   };
@@ -2417,75 +2436,87 @@ export function TripsScreen() {
                   ) : null}
 
                   {parsedItinerary.scheduled.length ? (
-                    <View style={styles.timelineShell}>
-                      <View style={styles.timelineLabels}>
-                        {parsedItinerary.hours.map((hour) => (
-                          <View key={`label-${hour}`} style={styles.timelineHourLabelWrap}>
-                            <Text style={styles.timelineHourLabel}>{formatTimelineHour(hour)}</Text>
-                          </View>
-                        ))}
-                      </View>
-                      <View
-                        style={[
-                          styles.timelineTrack,
-                          { height: parsedItinerary.hours.length * 72 },
-                        ]}
-                      >
-                        {parsedItinerary.hours.map((hour, index) => (
-                          <View
-                            key={`line-${hour}`}
-                            style={[
-                              styles.timelineHourLine,
-                              { top: index * 72 },
-                            ]}
-                          />
-                        ))}
-                        {parsedItinerary.scheduled.map((entry) => {
-                          const top =
-                            ((entry.startMinutes - parsedItinerary.earliestHour * 60) / 60) * 72;
-                          const height = Math.max(
-                            54,
-                            ((entry.endMinutes - entry.startMinutes) / 60) * 72 - 6
-                          );
-
-                          return (
-                            <TouchableOpacity
-                              key={`timeline-${entry.item.id}`}
-                              style={[
-                                styles.timelineEvent,
-                                activeItineraryItemId === entry.item.id &&
-                                  styles.timelineEventActive,
-                                { top, height },
-                              ]}
-                              activeOpacity={0.92}
-                              onPress={() =>
-                                openItineraryItemEditor(entry.item, {
-                                  top,
-                                  height,
-                                  context: "timeline",
-                                })
-                              }
-                            >
-                              <Text style={styles.timelineEventTime}>{entry.item.time}</Text>
-                              <Text style={styles.timelineEventTitle}>{entry.item.title}</Text>
-                              <Text style={styles.timelineEventDetail} numberOfLines={3}>
-                                {entry.item.detail || "Click to edit details"}
-                              </Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                      {activeItineraryItem && activeItineraryAnchor?.context === "timeline" ? (
+                    <ScrollView
+                      ref={itineraryTimelineScrollRef}
+                      style={[
+                        styles.timelineViewport,
+                        { height: itineraryTimelineViewportHeight },
+                      ]}
+                      contentContainerStyle={styles.timelineViewportContent}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator
+                      keyboardShouldPersistTaps="handled"
+                    >
+                      <View style={styles.timelineShell}>
+                        <View style={styles.timelineLabels}>
+                          {parsedItinerary.hours.map((hour) => (
+                            <View key={`label-${hour}`} style={styles.timelineHourLabelWrap}>
+                              <Text style={styles.timelineHourLabel}>{formatTimelineHour(hour)}</Text>
+                            </View>
+                          ))}
+                        </View>
                         <View
                           style={[
-                            styles.itineraryFloatingEditorWrap,
-                            { top: floatingItineraryEditorTop },
+                            styles.timelineTrack,
+                            { height: parsedItinerary.hours.length * 72 },
                           ]}
                         >
-                          {renderItineraryEditor("floating")}
+                          {parsedItinerary.hours.map((hour, index) => (
+                            <View
+                              key={`line-${hour}`}
+                              style={[
+                                styles.timelineHourLine,
+                                { top: index * 72 },
+                              ]}
+                            />
+                          ))}
+                          {parsedItinerary.scheduled.map((entry) => {
+                            const top =
+                              ((entry.startMinutes - parsedItinerary.earliestHour * 60) / 60) * 72;
+                            const height = Math.max(
+                              54,
+                              ((entry.endMinutes - entry.startMinutes) / 60) * 72 - 6
+                            );
+
+                            return (
+                              <TouchableOpacity
+                                key={`timeline-${entry.item.id}`}
+                                style={[
+                                  styles.timelineEvent,
+                                  activeItineraryItemId === entry.item.id &&
+                                    styles.timelineEventActive,
+                                  { top, height },
+                                ]}
+                                activeOpacity={0.92}
+                                onPress={() =>
+                                  openItineraryItemEditor(entry.item, {
+                                    top,
+                                    height,
+                                    context: "timeline",
+                                  })
+                                }
+                              >
+                                <Text style={styles.timelineEventTime}>{entry.item.time}</Text>
+                                <Text style={styles.timelineEventTitle}>{entry.item.title}</Text>
+                                <Text style={styles.timelineEventDetail} numberOfLines={3}>
+                                  {entry.item.detail || "Click to edit details"}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
                         </View>
-                      ) : null}
-                    </View>
+                        {activeItineraryItem && activeItineraryAnchor?.context === "timeline" ? (
+                          <View
+                            style={[
+                              styles.itineraryFloatingEditorWrap,
+                              { top: floatingItineraryEditorTop },
+                            ]}
+                          >
+                            {renderItineraryEditor("floating")}
+                          </View>
+                        ) : null}
+                      </View>
+                    </ScrollView>
                   ) : (
                     <View style={styles.emptyState}>
                       <Text style={styles.feedMeta}>
@@ -3673,6 +3704,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
+  itineraryEventModalScroll: {
+    flexGrow: 0,
+  },
+  itineraryEventModalScrollContent: {
+    gap: 12,
+    paddingBottom: 4,
+  },
   itineraryEventModalFloating: {
     borderColor: "#D06E91",
     backgroundColor: "#FFFDFB",
@@ -3755,6 +3793,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     position: "relative",
     overflow: "visible",
+  },
+  timelineViewport: {
+    flexGrow: 0,
+  },
+  timelineViewportContent: {
+    paddingBottom: 420,
   },
   itineraryFloatingEditorWrap: {
     position: "absolute",
