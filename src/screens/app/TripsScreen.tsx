@@ -46,6 +46,12 @@ const budgetCategories = [
 
 const monthNames = getMonthNames();
 type ToolkitSectionKey = "flightDates" | "weather" | "packing" | "budget";
+type BudgetStarterIdea = {
+  id: string;
+  label: string;
+  category: string;
+  helper: string;
+};
 
 const toolkitSectionById: Record<string, ToolkitSectionKey> = {
   "toolkit-1": "flightDates",
@@ -399,6 +405,37 @@ export function TripsScreen() {
       ].filter(Boolean))
     );
   }, [selectedBudgetPlan, liveConnections]);
+  const budgetStarterIdeas = useMemo<BudgetStarterIdea[]>(() => {
+    const cityName = selectedBudgetTrip.split(",")[0] || "Trip";
+    const starterIdeas: BudgetStarterIdea[] = [
+      {
+        id: "starter-coffee",
+        label: `${cityName} coffee stop`,
+        category: "Food",
+        helper: "Good for small cafe runs, snacks, or dessert.",
+      },
+      {
+        id: "starter-transport",
+        label: "Ride share or parking",
+        category: "Transport",
+        helper: "Use this for airport rides, gas, tolls, or parking.",
+      },
+      {
+        id: "starter-activity",
+        label: "Museum or activity tickets",
+        category: "Activities",
+        helper: "Helpful for galleries, tours, games, or event tickets.",
+      },
+      {
+        id: "starter-groceries",
+        label: "Groceries for the trip",
+        category: "Food",
+        helper: "Works well for snacks, breakfast runs, or shared home meals.",
+      },
+    ];
+
+    return starterIdeas;
+  }, [selectedBudgetTrip]);
 
   const visibleWeatherForecasts = useMemo(
     () =>
@@ -759,6 +796,16 @@ export function TripsScreen() {
       tripLocation: selectedBudgetTrip,
       budgetItems: nextBudgetItems,
     });
+  };
+
+  const applyBudgetStarterIdea = (idea: BudgetStarterIdea) => {
+    setDraftBudgetLabel(idea.label);
+    setDraftBudgetCategory(idea.category);
+    if (!draftBudgetPayer) {
+      setDraftBudgetPayer(budgetPayerOptions[0] ?? "You");
+    }
+    setOpenBudgetCategoryMenu(null);
+    setOpenBudgetPayerMenu(null);
   };
 
   const updateBudgetItem = (
@@ -2154,24 +2201,51 @@ export function TripsScreen() {
                       </View>
 
                       <View style={styles.budgetQuickAddCard}>
-                        <Text style={styles.controlLabel}>Quick add shared expenses</Text>
-                        <View style={styles.budgetQuickAddList}>
-                          {visibleBudgetSuggestions.map((item) => {
-                            const alreadyAdded = budgetItems.some((entry) => entry.id === item.id);
+                        <Text style={styles.controlLabel}>
+                          {visibleBudgetSuggestions.length
+                            ? "Quick add shared expenses"
+                            : "Starter ideas"}
+                        </Text>
+                        {visibleBudgetSuggestions.length ? (
+                          <View style={styles.budgetQuickAddList}>
+                            {visibleBudgetSuggestions.map((item) => {
+                              const alreadyAdded = budgetItems.some((entry) => entry.id === item.id);
 
-                            return (
-                              <TouchableOpacity key={item.id} style={[styles.budgetRow, alreadyAdded && styles.budgetRowDisabled]} onPress={() => addBudgetItem(item)} disabled={alreadyAdded} activeOpacity={0.9}>
-                                <View style={styles.toolCopy}>
-                                  <Text style={styles.feedMeta}>{item.label}</Text>
-                                  <Text style={styles.helperMeta}>
-                                    {item.category} | {item.payer} paid | ${item.amount.toFixed(2)}
+                              return (
+                                <TouchableOpacity key={item.id} style={[styles.budgetRow, alreadyAdded && styles.budgetRowDisabled]} onPress={() => addBudgetItem(item)} disabled={alreadyAdded} activeOpacity={0.9}>
+                                  <View style={styles.toolCopy}>
+                                    <Text style={styles.feedMeta}>{item.label}</Text>
+                                    <Text style={styles.helperMeta}>
+                                      {item.category} | {item.payer} paid | ${item.amount.toFixed(2)}
+                                    </Text>
+                                  </View>
+                                  <Text style={styles.addBudgetText}>{alreadyAdded ? "Added" : "Add"}</Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        ) : (
+                          <>
+                            <Text style={styles.feedMeta}>
+                              Tap one to prefill the expense form and keep moving.
+                            </Text>
+                            <View style={styles.budgetStarterGrid}>
+                              {budgetStarterIdeas.map((idea) => (
+                                <TouchableOpacity
+                                  key={idea.id}
+                                  style={styles.budgetStarterChip}
+                                  activeOpacity={0.9}
+                                  onPress={() => applyBudgetStarterIdea(idea)}
+                                >
+                                  <Text style={styles.budgetStarterTitle}>{idea.label}</Text>
+                                  <Text style={styles.budgetStarterMeta}>
+                                    {idea.category} • {idea.helper}
                                   </Text>
-                                </View>
-                                <Text style={styles.addBudgetText}>{alreadyAdded ? "Added" : "Add"}</Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
+                                </TouchableOpacity>
+                              ))}
+                            </View>
+                          </>
+                        )}
                       </View>
 
                       <TouchableOpacity style={styles.secondaryAction} onPress={closeBudgetTrip}>
@@ -2799,6 +2873,30 @@ const styles = StyleSheet.create({
   },
   budgetQuickAddList: {
     gap: 10,
+  },
+  budgetStarterGrid: {
+    gap: 8,
+  },
+  budgetStarterChip: {
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#EEDDD1",
+    backgroundColor: "#FFFCF8",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  budgetStarterTitle: {
+    color: palette.text,
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: typography.sansFamilyMedium,
+  },
+  budgetStarterMeta: {
+    color: palette.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    fontFamily: typography.sansFamily,
   },
   budgetEditorRow: {
     gap: 10,
