@@ -1,5 +1,11 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  LayoutChangeEvent,
+  StyleSheet,
+  Text,
+  View,
+  ViewProps,
+} from "react-native";
 import { palette } from "../../theme/palette";
 import { typography } from "../../theme/typography";
 
@@ -8,14 +14,19 @@ export function SectionCard({
   subtitle,
   children,
   variant = "default",
+  onLayout,
+  bodyOnLayout,
 }: {
   title: string;
   subtitle: string;
   children: React.ReactNode;
   variant?: "default" | "memory" | "travel";
+  onLayout?: ViewProps["onLayout"];
+  bodyOnLayout?: (event: LayoutChangeEvent) => void;
 }) {
   return (
     <View
+      onLayout={onLayout}
       style={[
         styles.card,
         variant === "memory" ? styles.memoryCard : null,
@@ -46,7 +57,9 @@ export function SectionCard({
       </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
-      <View style={styles.body}>{children}</View>
+      <View style={styles.body} onLayout={bodyOnLayout}>
+        {children}
+      </View>
     </View>
   );
 }

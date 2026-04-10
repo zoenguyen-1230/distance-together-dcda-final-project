@@ -267,6 +267,8 @@ export function TripsScreen() {
   );
   const tripsScrollRef = useRef<ScrollView | null>(null);
   const toolkitSectionOffsets = useRef<Partial<Record<ToolkitSectionKey, number>>>({});
+  const toolkitCardOffset = useRef(0);
+  const toolkitBodyOffset = useRef(0);
   const [openCalendarPicker, setOpenCalendarPicker] = useState<
     "trip" | "flight" | "tracker" | null
   >(null);
@@ -275,7 +277,8 @@ export function TripsScreen() {
   const isEditingExistingTrip = !isCreatingTrip && selectedTripId !== "";
 
   const registerToolkitSection = (section: ToolkitSectionKey, y: number) => {
-    toolkitSectionOffsets.current[section] = y;
+    toolkitSectionOffsets.current[section] =
+      toolkitCardOffset.current + toolkitBodyOffset.current + y;
   };
 
   const jumpToToolkitSection = (section: ToolkitSectionKey) => {
@@ -1565,6 +1568,12 @@ export function TripsScreen() {
         title="Trip toolkit"
         subtitle="Flights, weather, packing, and budgeting in one shared planning space"
         variant="travel"
+        onLayout={(event) => {
+          toolkitCardOffset.current = event.nativeEvent.layout.y;
+        }}
+        bodyOnLayout={(event) => {
+          toolkitBodyOffset.current = event.nativeEvent.layout.y;
+        }}
       >
         {tripToolkit.map((item) => (
           <TouchableOpacity
