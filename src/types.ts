@@ -88,10 +88,12 @@ export interface JournalEntry {
 
 export interface MoodUpdate {
   id: string;
+  connectionId?: string;
   name: string;
   mood: string;
   energy: string;
   health: string;
+  note?: string;
   updatedAt: string;
   color: string;
 }

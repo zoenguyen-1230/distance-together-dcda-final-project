@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { socialPlatforms } from "../../data/mockData";
 import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
@@ -39,24 +38,13 @@ const profileNoteOptions = [
 const accountStatusOptions = [
   "Not connected yet",
   "Invite sent",
-  "Synced profile photo",
-  "Synced profile + playlist",
-  "Synced socials + calendar context",
+  "Profile saved",
+  "Shared space active",
+  "Shared planning in progress",
 ];
 const seanProfileImage = require("../../assets/sean-profile.jpg");
 const profileImages: Record<string, any> = {
   "conn-1": seanProfileImage,
-};
-const socialVisuals: Record<
-  SocialPlatform,
-  { glyph: string; background: string; color: string }
-> = {
-  Instagram: { glyph: "IG", background: "#FDE7F0", color: "#C64C73" },
-  Spotify: { glyph: "SP", background: "#E7F8EE", color: "#1DB954" },
-  TikTok: { glyph: "TT", background: "#EAF2FF", color: "#111111" },
-  Facebook: { glyph: "f", background: "#E8F0FF", color: "#1877F2" },
-  X: { glyph: "X", background: "#F2F2F2", color: "#111111" },
-  BeReal: { glyph: "Be", background: "#FFF3D9", color: "#111111" },
 };
 export function ConnectionsScreen() {
   const { isDemoMode, user, userEmail } = useAuth();
@@ -64,9 +52,6 @@ export function ConnectionsScreen() {
   const { profile, saveProfile } = useProfile();
   const [selectedFilter, setSelectedFilter] = useState<ConnectionFilter>(
     isDemoMode ? "partner" : "all"
-  );
-  const [selectedSocials, setSelectedSocials] = useState<SocialPlatform[]>(
-    isDemoMode ? ["Instagram", "Spotify"] : []
   );
   const [profileEditorVisible, setProfileEditorVisible] = useState(false);
   const [profileDraftName, setProfileDraftName] = useState(profile.displayName);
@@ -142,7 +127,6 @@ export function ConnectionsScreen() {
 
   useEffect(() => {
     setSelectedFilter(isDemoMode ? "partner" : "all");
-    setSelectedSocials(isDemoMode ? ["Instagram", "Spotify"] : []);
     setEditorVisible(false);
     setSelectedPersonId("");
   }, [isDemoMode]);
@@ -201,14 +185,6 @@ export function ConnectionsScreen() {
     }
   }, [draftLocation]);
 
-  const toggleSocial = (platform: SocialPlatform) => {
-    setSelectedSocials((current) =>
-      current.includes(platform)
-        ? current.filter((item) => item !== platform)
-        : [...current, platform]
-    );
-  };
-
   const loadConnection = (connectionId: string) => {
     const connection = connections.find((item) => item.id === connectionId);
 
@@ -250,14 +226,6 @@ export function ConnectionsScreen() {
     if (match) {
       setDraftTimezone(match.timezone);
     }
-  };
-
-  const toggleDraftSocial = (platform: SocialPlatform) => {
-    setDraftLinkedSocials((current) =>
-      current.includes(platform)
-        ? current.filter((item) => item !== platform)
-        : [...current, platform]
-    );
   };
 
   const saveConnection = () => {
@@ -307,7 +275,21 @@ export function ConnectionsScreen() {
     const nextSharedConnections = await fetchSharedConnections(user.id);
     setConnections((current) => {
       const localConnections = current.filter((connection) => !isSharedConnection(connection.id));
-      return [...localConnections, ...nextSharedConnections];
+      const dedupedLocalConnections = [...localConnections];
+
+      nextSharedConnections.forEach((sharedConnection) => {
+        const duplicateLocalIndex = dedupedLocalConnections.findIndex(
+          (connection) =>
+            connection.relationshipType === sharedConnection.relationshipType &&
+            connection.name.trim().toLowerCase() === sharedConnection.name.trim().toLowerCase()
+        );
+
+        if (duplicateLocalIndex >= 0) {
+          dedupedLocalConnections.splice(duplicateLocalIndex, 1);
+        }
+      });
+
+      return [...dedupedLocalConnections, ...nextSharedConnections];
     });
   };
 
@@ -326,16 +308,26 @@ export function ConnectionsScreen() {
     setInviteFeedback("");
 
     try {
-      await sendRelationshipInvite({
+      const result = await sendRelationshipInvite({
         senderId: user.id,
         recipientEmail: inviteEmail,
         recipientName: inviteName,
         relationshipType: inviteRelationshipType,
         note: inviteNote,
       });
-      setInviteFeedback(
-        `Invite saved for ${inviteEmail.trim().toLowerCase()}. They can accept it from the People tab after signing in.`
-      );
+      if (result.status === "already_connected") {
+        setInviteFeedback(
+          `${inviteEmail.trim().toLowerCase()} is already connected to your shared Same Time space.`
+        );
+      } else if (result.status === "already_sent") {
+        setInviteFeedback(
+          `An invite is already waiting for ${inviteEmail.trim().toLowerCase()}. I refreshed the details instead of creating a duplicate.`
+        );
+      } else {
+        setInviteFeedback(
+          `Invite saved for ${inviteEmail.trim().toLowerCase()}. They can accept it from the People tab after signing in.`
+        );
+      }
       setInviteName("");
       setInviteEmail("");
       setInviteNote("");
@@ -378,14 +370,6 @@ export function ConnectionsScreen() {
     if (match) {
       setProfileDraftTimezone(match.timezone);
     }
-  };
-
-  const toggleProfileSocial = (platform: SocialPlatform) => {
-    setProfileDraftLinkedSocials((current) =>
-      current.includes(platform)
-        ? current.filter((item) => item !== platform)
-        : [...current, platform]
-    );
   };
 
   const uploadProfilePhoto = async () => {
@@ -456,25 +440,6 @@ export function ConnectionsScreen() {
             <Text style={styles.accountStatus}>
               {profile.note || "Describe how you want to use the space with your people."}
             </Text>
-            <View style={styles.profileSocialRow}>
-              {profile.linkedSocials.map((platform) => {
-                const visual = socialVisuals[platform];
-
-                return (
-                  <View
-                    key={`current-profile-${platform}`}
-                    style={[
-                      styles.inlineSocialBadge,
-                      { backgroundColor: visual.background },
-                    ]}
-                  >
-                    <Text style={[styles.inlineSocialGlyph, { color: visual.color }]}>
-                      {visual.glyph}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
             <TouchableOpacity onPress={() => setProfileEditorVisible(true)}>
               <Text style={styles.editLink}>Edit your profile</Text>
             </TouchableOpacity>
@@ -587,17 +552,6 @@ export function ConnectionsScreen() {
                   </View>
                 ) : null}
               </View>
-              <Text style={styles.accountLabel}>Linked socials</Text>
-              <View style={styles.chipWrap}>
-                {socialPlatforms.map((platform) => (
-                  <FilterChip
-                    key={`profile-${platform}`}
-                    label={platform}
-                    active={profileDraftLinkedSocials.includes(platform)}
-                    onPress={() => toggleProfileSocial(platform)}
-                  />
-                ))}
-              </View>
             </View>
             <TouchableOpacity style={styles.primaryButton} onPress={saveCurrentProfile}>
               <Text style={styles.primaryButtonText}>Save your profile</Text>
@@ -651,25 +605,6 @@ export function ConnectionsScreen() {
                 {connection.photoLabel} | {connection.timezone}
               </Text>
               <Text style={styles.accountStatus}>{connection.accountStatus}</Text>
-              <View style={styles.profileSocialRow}>
-                {connection.linkedSocials.map((platform) => {
-                  const visual = socialVisuals[platform];
-
-                  return (
-                    <View
-                      key={`${connection.id}-${platform}`}
-                      style={[
-                        styles.inlineSocialBadge,
-                        { backgroundColor: visual.background },
-                      ]}
-                    >
-                      <Text style={[styles.inlineSocialGlyph, { color: visual.color }]}>
-                        {visual.glyph}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
               {!isSharedConnection(connection.id) ? (
                 <TouchableOpacity onPress={() => loadConnection(connection.id)}>
                   <Text style={styles.editLink}>Edit profile</Text>
@@ -817,7 +752,7 @@ export function ConnectionsScreen() {
               </View>
               <Text style={styles.fieldLabel}>Account sync status</Text>
               <Text style={styles.fieldHelper}>
-                Use this to show what outside context is already connected for this person.
+                Use this to show whether this person is still local-only, invited, or already sharing a real Same Time space with you.
               </Text>
               <View style={styles.selectWrap}>
                 <TouchableOpacity
@@ -845,17 +780,6 @@ export function ConnectionsScreen() {
                     ))}
                   </View>
                 ) : null}
-              </View>
-              <Text style={styles.accountLabel}>Connect accounts</Text>
-              <View style={styles.chipWrap}>
-                {socialPlatforms.map((platform) => (
-                  <FilterChip
-                    key={`draft-${platform}`}
-                    label={platform}
-                    active={draftLinkedSocials.includes(platform)}
-                    onPress={() => toggleDraftSocial(platform)}
-                  />
-                ))}
               </View>
             </View>
             <TouchableOpacity style={styles.primaryButton} onPress={saveConnection}>
@@ -1007,59 +931,6 @@ export function ConnectionsScreen() {
         )}
       </SectionCard>
 
-      <SectionCard
-        title="Connected socials"
-        subtitle="Bring familiar context into the relationship space without making outside platforms the main experience"
-      >
-        <View style={styles.chipWrap}>
-          {socialPlatforms.map((platform) => (
-            <FilterChip
-              key={platform}
-              label={platform}
-              active={selectedSocials.includes(platform)}
-              onPress={() => toggleSocial(platform)}
-            />
-          ))}
-        </View>
-
-        {selectedSocials.length ? (
-          selectedSocials.map((platform) => (
-            <View key={platform} style={styles.feedCard}>
-              <View
-                style={[
-                  styles.socialBadge,
-                  { backgroundColor: socialVisuals[platform].background },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.socialBadgeText,
-                    { color: socialVisuals[platform].color },
-                  ]}
-                >
-                  {socialVisuals[platform].glyph}
-                </Text>
-              </View>
-              <View style={styles.feedCopy}>
-                <Text style={styles.feedTitle}>{platform} profile linked</Text>
-                <Text style={styles.feedMeta}>
-                  Sync handles, recent context, and shared identity cues so the app stays up to
-                  date with the accounts you both already use.
-                </Text>
-              </View>
-            </View>
-          ))
-        ) : (
-          <View style={styles.feedCard}>
-            <View style={styles.feedCopy}>
-              <Text style={styles.feedTitle}>No socials linked yet</Text>
-              <Text style={styles.feedMeta}>
-                That is okay. Same Time can stay intimate first, then connected later.
-              </Text>
-            </View>
-          </View>
-        )}
-      </SectionCard>
     </ScreenSurface>
   );
 }

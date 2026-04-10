@@ -33,6 +33,7 @@ import {
   ItineraryItem,
   JournalEntry,
   Message,
+  MoodUpdate,
   PackingItem,
   TimeCapsule,
   VisitPlan,
@@ -40,8 +41,10 @@ import {
 import { loadWorkspaceState, saveWorkspaceAppData, type StoredAppData } from "../lib/workspaceState";
 import {
   fetchSharedCalendarEvents,
+  fetchSharedCheckInPrompts,
   fetchSharedJournalEntries,
   fetchSharedMessages,
+  fetchSharedMoodUpdates,
   fetchSharedTimeCapsules,
 } from "../lib/sharedContent";
 import { fetchSharedConnections, isSharedConnection } from "../lib/sharedRelationships";
@@ -60,6 +63,8 @@ interface AppDataContextValue {
   setCalendarEvents: React.Dispatch<React.SetStateAction<CalendarEvent[]>>;
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  moodUpdates: MoodUpdate[];
+  setMoodUpdates: React.Dispatch<React.SetStateAction<MoodUpdate[]>>;
   checkInPrompts: CheckInPrompt[];
   setCheckInPrompts: React.Dispatch<React.SetStateAction<CheckInPrompt[]>>;
   visitPlans: VisitPlan[];
@@ -105,6 +110,7 @@ function buildDefaultData(mode: "filled" | "blank"): StoredAppData {
       timeCapsules: seedTimeCapsules,
       calendarEvents: seedCalendarEvents,
       messages: seedConversations,
+      moodUpdates: [],
       checkInPrompts: seedCheckInPrompts,
       visitPlans: seedVisitPlans,
       itineraryItems: seedItineraryItems,
@@ -124,6 +130,7 @@ function buildDefaultData(mode: "filled" | "blank"): StoredAppData {
     timeCapsules: [],
     calendarEvents: [],
     messages: [],
+    moodUpdates: [],
     checkInPrompts: [],
     visitPlans: [],
     itineraryItems: [],
@@ -148,6 +155,7 @@ function hasMeaningfulAppData(appData: Partial<StoredAppData> | null | undefined
       appData.timeCapsules?.length ||
       appData.calendarEvents?.length ||
       appData.messages?.length ||
+      appData.moodUpdates?.length ||
       appData.checkInPrompts?.length ||
       appData.visitPlans?.length ||
       appData.itineraryItems?.length ||
@@ -162,9 +170,24 @@ function hasMeaningfulAppData(appData: Partial<StoredAppData> | null | undefined
 }
 
 function mergeConnections(localConnections: Connection[], sharedConnections: Connection[]) {
+  const remainingLocalConnections = [...localConnections];
+
+  sharedConnections.forEach((sharedConnection) => {
+    const duplicateLocalIndex = remainingLocalConnections.findIndex(
+      (connection) =>
+        !isSharedConnection(connection.id) &&
+        connection.relationshipType === sharedConnection.relationshipType &&
+        connection.name.trim().toLowerCase() === sharedConnection.name.trim().toLowerCase()
+    );
+
+    if (duplicateLocalIndex >= 0) {
+      remainingLocalConnections.splice(duplicateLocalIndex, 1);
+    }
+  });
+
   const byId = new Map<string, Connection>();
 
-  [...localConnections, ...sharedConnections].forEach((connection) => {
+  [...remainingLocalConnections, ...sharedConnections].forEach((connection) => {
     byId.set(connection.id, connection);
   });
 
@@ -199,6 +222,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
   const [timeCapsules, setTimeCapsules] = useState<TimeCapsule[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [moodUpdates, setMoodUpdates] = useState<MoodUpdate[]>([]);
   const [checkInPrompts, setCheckInPrompts] = useState<CheckInPrompt[]>([]);
   const [visitPlans, setVisitPlans] = useState<VisitPlan[]>([]);
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([]);
@@ -216,6 +240,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     timeCapsules: overrides?.timeCapsules ?? withoutRemoteSharedItems(timeCapsules),
     calendarEvents: overrides?.calendarEvents ?? withoutRemoteSharedItems(calendarEvents),
     messages: overrides?.messages ?? withoutRemoteSharedItems(messages),
+    moodUpdates: overrides?.moodUpdates ?? withoutRemoteSharedItems(moodUpdates),
     checkInPrompts: overrides?.checkInPrompts ?? checkInPrompts,
     visitPlans: overrides?.visitPlans ?? withoutRemoteSharedItems(visitPlans),
     itineraryItems: overrides?.itineraryItems ?? withoutRemoteSharedItems(itineraryItems),
@@ -251,13 +276,15 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
 
       try {
         if (shouldUseSupabaseState && user?.id) {
-          const [sharedConnections, sharedMessages, sharedJournalEntries, sharedTimeCapsules, sharedCalendarEvents, sharedVisitPlans, sharedTripToolkit] =
+          const [sharedConnections, sharedMessages, sharedJournalEntries, sharedTimeCapsules, sharedCalendarEvents, sharedCheckInPrompts, sharedMoodUpdates, sharedVisitPlans, sharedTripToolkit] =
             await Promise.all([
               fetchSharedConnections(user.id).catch(() => []),
               fetchSharedMessages(user.id).catch(() => []),
               fetchSharedJournalEntries(user.id).catch(() => []),
               fetchSharedTimeCapsules(user.id).catch(() => []),
               fetchSharedCalendarEvents(user.id).catch(() => []),
+              fetchSharedCheckInPrompts(user.id).catch(() => []),
+              fetchSharedMoodUpdates(user.id).catch(() => []),
               fetchSharedVisitPlans(user.id).catch(() => []),
               fetchSharedTripToolkit(user.id).catch(() => ({
                 itineraryItems: [],
@@ -313,8 +340,19 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
                   sharedMessages
                 )
               );
+              setMoodUpdates(
+                mergeById(
+                  Array.isArray(parsed.moodUpdates) ? (parsed.moodUpdates as MoodUpdate[]) : [],
+                  sharedMoodUpdates
+                )
+              );
               setCheckInPrompts(
-                Array.isArray(parsed.checkInPrompts) ? (parsed.checkInPrompts as CheckInPrompt[]) : []
+                mergeById(
+                  Array.isArray(parsed.checkInPrompts)
+                    ? (parsed.checkInPrompts as CheckInPrompt[])
+                    : [],
+                  sharedCheckInPrompts
+                )
               );
               setVisitPlans(
                 mergeById(
@@ -388,7 +426,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
             setTimeCapsules(mergeById(blankWorkspace.timeCapsules, sharedTimeCapsules));
             setCalendarEvents(mergeById(blankWorkspace.calendarEvents, sharedCalendarEvents));
             setMessages(mergeById(blankWorkspace.messages, sharedMessages));
-            setCheckInPrompts(blankWorkspace.checkInPrompts);
+            setMoodUpdates(mergeById(blankWorkspace.moodUpdates, sharedMoodUpdates));
+            setCheckInPrompts(mergeById(blankWorkspace.checkInPrompts, sharedCheckInPrompts));
             setVisitPlans(mergeById(blankWorkspace.visitPlans, sharedVisitPlans));
             setItineraryItems(mergeById(blankWorkspace.itineraryItems, sharedTripToolkit.itineraryItems));
             setCompletedItinerary(
@@ -423,6 +462,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
                 Array.isArray(parsed.calendarEvents) ? parsed.calendarEvents : []
               );
               setMessages(Array.isArray(parsed.messages) ? parsed.messages : []);
+              setMoodUpdates(Array.isArray(parsed.moodUpdates) ? parsed.moodUpdates : []);
               setCheckInPrompts(
                 Array.isArray(parsed.checkInPrompts) ? parsed.checkInPrompts : []
               );
@@ -468,6 +508,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
         setTimeCapsules(nextData.timeCapsules);
         setCalendarEvents(nextData.calendarEvents);
         setMessages(nextData.messages);
+        setMoodUpdates(nextData.moodUpdates);
         setCheckInPrompts(nextData.checkInPrompts);
         setVisitPlans(nextData.visitPlans);
         setItineraryItems(nextData.itineraryItems);
@@ -525,6 +566,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
     initialized,
     journalEntries,
     messages,
+    moodUpdates,
     shouldUseSupabaseState,
     storageKey,
     hydratedScopeKey,
@@ -547,6 +589,8 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       setCalendarEvents,
       messages,
       setMessages,
+      moodUpdates,
+      setMoodUpdates,
       checkInPrompts,
       setCheckInPrompts,
       visitPlans,
@@ -581,6 +625,7 @@ export function AppDataProvider({ children }: { children: React.ReactNode }) {
       itineraryItems,
       journalEntries,
       messages,
+      moodUpdates,
       packedItems,
       persistAppDataNow,
       packingItems,

@@ -44,7 +44,7 @@ function accentForRelationship(relationshipType: RelationshipType) {
 }
 
 export function isSharedConnection(connectionId: string) {
-  return connectionId.startsWith("shared-");
+  return connectionId.startsWith("shared::") || connectionId.startsWith("shared-");
 }
 
 export async function fetchSharedConnections(userId: string): Promise<Connection[]> {
@@ -76,22 +76,63 @@ export async function fetchSharedConnections(userId: string): Promise<Connection
 
   const { data: relationships, error: relationshipError } = await supabase
     .from("relationships")
-    .select("id, relationship_type")
+    .select("id, relationship_type, created_at")
     .in("id", relationshipIds);
 
   if (relationshipError) {
     throw relationshipError;
   }
 
-  const relationshipTypeById = new Map<string, RelationshipType>(
+  const relationshipMetaById = new Map<
+    string,
+    { relationshipType: RelationshipType; createdAt: string | null }
+  >(
     (relationships ?? []).map((relationship) => [
       relationship.id,
-      relationship.relationship_type as RelationshipType,
+      {
+        relationshipType: relationship.relationship_type as RelationshipType,
+        createdAt: relationship.created_at ?? null,
+      },
     ])
   );
 
   const peerMembers = (members ?? []).filter((member) => member.profile_id !== userId);
-  const peerIds = Array.from(new Set(peerMembers.map((member) => member.profile_id).filter(Boolean)));
+  const preferredMemberByPeerId = new Map<
+    string,
+    { relationshipId: string; relationshipType: RelationshipType }
+  >();
+
+  peerMembers.forEach((member) => {
+    const peerId = member.profile_id;
+    const relationshipMeta = relationshipMetaById.get(member.relationship_id);
+    const relationshipType = relationshipMeta?.relationshipType ?? "friend";
+
+    if (!peerId) {
+      return;
+    }
+
+    const existing = preferredMemberByPeerId.get(peerId);
+    if (!existing) {
+      preferredMemberByPeerId.set(peerId, {
+        relationshipId: member.relationship_id,
+        relationshipType,
+      });
+      return;
+    }
+
+    const existingCreatedAt =
+      relationshipMetaById.get(existing.relationshipId)?.createdAt ?? "";
+    const nextCreatedAt = relationshipMeta?.createdAt ?? "";
+
+    if (nextCreatedAt > existingCreatedAt) {
+      preferredMemberByPeerId.set(peerId, {
+        relationshipId: member.relationship_id,
+        relationshipType,
+      });
+    }
+  });
+
+  const peerIds = Array.from(preferredMemberByPeerId.keys());
 
   if (!peerIds.length) {
     return [];
@@ -110,13 +151,20 @@ export async function fetchSharedConnections(userId: string): Promise<Connection
     (profiles ?? []).map((profile) => [profile.id, profile])
   );
 
-  return peerMembers
-    .map((member) => {
-      const profile = profileById.get(member.profile_id);
-      const relationshipType = relationshipTypeById.get(member.relationship_id) ?? "friend";
+  const connections: Connection[] = [];
 
-      return {
-        id: buildSharedConnectionId(member.relationship_id, member.profile_id),
+  peerIds.forEach((peerId) => {
+      const profile = profileById.get(peerId);
+      const preferredMember = preferredMemberByPeerId.get(peerId);
+      const relationshipId = preferredMember?.relationshipId;
+      const relationshipType = preferredMember?.relationshipType ?? "friend";
+
+      if (!relationshipId) {
+        return;
+      }
+
+      connections.push({
+        id: buildSharedConnectionId(relationshipId, peerId),
         name: profile?.full_name || "Shared connection",
         relationshipType,
         location: profile?.location || "Shared space",
@@ -127,8 +175,10 @@ export async function fetchSharedConnections(userId: string): Promise<Connection
         linkedSocials: [],
         accountStatus: "Shared space active",
         photoUri: profile?.photo_uri || profile?.avatar_url || undefined,
-      } satisfies Connection;
+      } satisfies Connection);
     });
+
+  return connections;
 }
 
 export async function fetchIncomingInvites(userEmail: string): Promise<RelationshipInvite[]> {
@@ -144,10 +194,26 @@ export async function fetchIncomingInvites(userEmail: string): Promise<Relations
     throw error;
   }
 
-  return (data ?? []).map((invite) => ({
+  const senderIds = Array.from(new Set((data ?? []).map((invite) => invite.sender_id).filter(Boolean)));
+  const { data: senderProfiles } = senderIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", senderIds)
+    : { data: [] as Array<{ id: string; full_name: string | null }> };
+  const senderNameById = new Map(
+    (senderProfiles ?? []).map((profile) => [profile.id, profile.full_name || "Someone"])
+  );
+
+  const dedupedInvites = new Map<string, (typeof data)[number]>();
+  (data ?? []).forEach((invite) => {
+    const key = `${invite.sender_id}|${invite.recipient_email.toLowerCase()}|${invite.relationship_type}|${invite.status}`;
+    if (!dedupedInvites.has(key)) {
+      dedupedInvites.set(key, invite);
+    }
+  });
+
+  return Array.from(dedupedInvites.values()).map((invite) => ({
     id: invite.id,
     senderId: invite.sender_id,
-    senderName: "Someone",
+    senderName: senderNameById.get(invite.sender_id) || "Someone",
     recipientEmail: invite.recipient_email,
     recipientName: invite.recipient_name || "",
     relationshipType: invite.relationship_type as RelationshipType,
@@ -168,7 +234,15 @@ export async function fetchSentInvites(userId: string): Promise<RelationshipInvi
     throw error;
   }
 
-  return (data ?? []).map((invite) => ({
+  const dedupedInvites = new Map<string, (typeof data)[number]>();
+  (data ?? []).forEach((invite) => {
+    const key = `${invite.recipient_email.toLowerCase()}|${invite.relationship_type}|${invite.status}`;
+    if (!dedupedInvites.has(key)) {
+      dedupedInvites.set(key, invite);
+    }
+  });
+
+  return Array.from(dedupedInvites.values()).map((invite) => ({
     id: invite.id,
     senderId: invite.sender_id,
     senderName: "You",
@@ -188,9 +262,32 @@ export async function sendRelationshipInvite(input: {
   relationshipType: RelationshipType;
   note: string;
 }) {
+  const normalizedEmail = input.recipientEmail.trim().toLowerCase();
+  const { data: existingInvite, error: existingInviteError } = await supabase
+    .from("relationship_invites")
+    .select("id, status")
+    .eq("sender_id", input.senderId)
+    .eq("recipient_email", normalizedEmail)
+    .in("status", ["pending", "accepted"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingInviteError) {
+    throw existingInviteError;
+  }
+
+  if (existingInvite?.status === "accepted") {
+    return { status: "already_connected" as const };
+  }
+
+  if (existingInvite?.status === "pending") {
+    return { status: "already_sent" as const };
+  }
+
   const { error } = await supabase.from("relationship_invites").insert({
     sender_id: input.senderId,
-    recipient_email: input.recipientEmail.trim().toLowerCase(),
+    recipient_email: normalizedEmail,
     recipient_name: input.recipientName.trim() || null,
     relationship_type: input.relationshipType,
     note: input.note.trim() || null,
@@ -199,6 +296,8 @@ export async function sendRelationshipInvite(input: {
   if (error) {
     throw error;
   }
+
+  return { status: "sent" as const };
 }
 
 export async function acceptRelationshipInvite(inviteId: string) {

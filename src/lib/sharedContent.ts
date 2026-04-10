@@ -1,7 +1,9 @@
 import {
   CalendarEvent,
+  CheckInPrompt,
   JournalEntry,
   Message,
+  MoodUpdate,
   TimeCapsule,
 } from "../types";
 import { supabase } from "./supabase";
@@ -417,4 +419,270 @@ export async function deleteSharedCalendarEvent(eventId: string) {
   const remoteId = eventId.replace("remote-event-", "");
   const { error } = await supabase.from("calendar_events").delete().eq("id", remoteId);
   if (error) throw error;
+}
+
+export async function fetchSharedCheckInPrompts(userId: string): Promise<CheckInPrompt[]> {
+  const peerByRelationshipId = await fetchRelationshipPeers(userId);
+  const relationshipIds = Array.from(peerByRelationshipId.keys());
+
+  if (!relationshipIds.length) {
+    return [];
+  }
+
+  const [{ data: prompts, error: promptError }, { data: responses, error: responseError }] =
+    await Promise.all([
+      supabase
+        .from("checkin_prompts")
+        .select("id, relationship_id, prompt_text, created_by, created_at")
+        .in("relationship_id", relationshipIds)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("checkin_responses")
+        .select("id, prompt_id, author_id, response_text, created_at")
+        .order("created_at", { ascending: false }),
+    ]);
+
+  if (promptError) {
+    throw promptError;
+  }
+
+  if (responseError) {
+    throw responseError;
+  }
+
+  const latestResponseByPromptId = new Map<string, { authorId: string; text: string }>();
+  (responses ?? []).forEach((response) => {
+    if (!latestResponseByPromptId.has(response.prompt_id)) {
+      latestResponseByPromptId.set(response.prompt_id, {
+        authorId: response.author_id,
+        text: response.response_text || "",
+      });
+    }
+  });
+
+  return (prompts ?? []).flatMap((prompt) => {
+    const peerId = peerByRelationshipId.get(prompt.relationship_id);
+    if (!peerId) {
+      return [];
+    }
+
+    const reply = latestResponseByPromptId.get(prompt.id);
+
+    return [
+      {
+        id: `remote-prompt-${prompt.id}`,
+        connectionId: buildSharedConnectionId(prompt.relationship_id, peerId),
+        promptText: prompt.prompt_text,
+        sentAt: formatTime(prompt.created_at),
+        direction: prompt.created_by === userId ? "outgoing" : "incoming",
+        replyText: reply?.authorId === userId ? reply.text : undefined,
+      } satisfies CheckInPrompt,
+    ];
+  });
+}
+
+export async function saveSharedCheckInPrompt(input: {
+  userId: string;
+  connectionIds: string[];
+  promptText: string;
+}) {
+  const sharedConnections = input.connectionIds
+    .map((connectionId) => ({
+      connectionId,
+      parsed: parseSharedConnectionId(connectionId),
+    }))
+    .filter(
+      (
+        item
+      ): item is { connectionId: string; parsed: NonNullable<ReturnType<typeof parseSharedConnectionId>> } =>
+        Boolean(item.parsed)
+    );
+
+  if (!sharedConnections.length) {
+    return [];
+  }
+
+  const payload = sharedConnections.map((item) => ({
+    relationship_id: item.parsed.relationshipId,
+    prompt_text: input.promptText,
+    created_by: input.userId,
+  }));
+
+  const { data, error } = await supabase
+    .from("checkin_prompts")
+    .insert(payload)
+    .select("id, relationship_id, prompt_text, created_at");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).flatMap((prompt) => {
+    const matchingConnection = sharedConnections.find(
+      (item) => item.parsed.relationshipId === prompt.relationship_id
+    );
+    if (!matchingConnection) {
+      return [];
+    }
+
+    return [
+      {
+        id: `remote-prompt-${prompt.id}`,
+        connectionId: matchingConnection.connectionId,
+        promptText: prompt.prompt_text,
+        sentAt: formatTime(prompt.created_at),
+        direction: "outgoing",
+      } satisfies CheckInPrompt,
+    ];
+  });
+}
+
+export async function saveSharedCheckInReply(input: {
+  userId: string;
+  promptId: string;
+  replyText: string;
+}) {
+  const remotePromptId = input.promptId.replace("remote-prompt-", "");
+  const { data, error } = await supabase
+    .from("checkin_responses")
+    .insert({
+      prompt_id: remotePromptId,
+      author_id: input.userId,
+      response_text: input.replyText,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data?.id ?? null;
+}
+
+export async function fetchSharedMoodUpdates(userId: string): Promise<MoodUpdate[]> {
+  const peerByRelationshipId = await fetchRelationshipPeers(userId);
+  const relationshipIds = Array.from(peerByRelationshipId.keys());
+
+  if (!relationshipIds.length) {
+    return [];
+  }
+
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", Array.from(new Set(peerByRelationshipId.values())));
+
+  if (profileError) {
+    throw profileError;
+  }
+
+  const peerNameById = new Map(
+    (profiles ?? []).map((profile) => [profile.id, profile.full_name || "Your person"])
+  );
+
+  const { data, error } = await supabase
+    .from("mood_updates")
+    .select("id, relationship_id, author_id, mood, energy, health, note, created_at")
+    .in("relationship_id", relationshipIds)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  const latestByRelationshipId = new Map<string, (typeof data)[number]>();
+  (data ?? []).forEach((item) => {
+    if (item.author_id !== userId && !latestByRelationshipId.has(item.relationship_id)) {
+      latestByRelationshipId.set(item.relationship_id, item);
+    }
+  });
+
+  return Array.from(latestByRelationshipId.values()).flatMap((item) => {
+    const peerId = peerByRelationshipId.get(item.relationship_id);
+    if (!peerId) {
+      return [];
+    }
+
+    return [
+      {
+        id: `remote-mood-${item.id}`,
+        connectionId: buildSharedConnectionId(item.relationship_id, peerId),
+        name: peerNameById.get(peerId) || "Your person",
+        mood: item.mood,
+        energy: item.energy || "",
+        health: item.health || "",
+        note: item.note || "",
+        updatedAt: formatTime(item.created_at),
+        color: "#FFD8DE",
+      } satisfies MoodUpdate,
+    ];
+  });
+}
+
+export async function saveSharedMoodUpdate(input: {
+  userId: string;
+  connectionIds: string[];
+  mood: string;
+  energy: string;
+  health: string;
+  note?: string;
+}) {
+  const sharedConnections = input.connectionIds
+    .map((connectionId) => ({
+      connectionId,
+      parsed: parseSharedConnectionId(connectionId),
+    }))
+    .filter(
+      (
+        item
+      ): item is { connectionId: string; parsed: NonNullable<ReturnType<typeof parseSharedConnectionId>> } =>
+        Boolean(item.parsed)
+    );
+
+  if (!sharedConnections.length) {
+    return [];
+  }
+
+  const payload = sharedConnections.map((item) => ({
+    relationship_id: item.parsed.relationshipId,
+    author_id: input.userId,
+    mood: input.mood,
+    energy: input.energy,
+    health: input.health,
+    note: input.note || null,
+  }));
+
+  const { data, error } = await supabase
+    .from("mood_updates")
+    .insert(payload)
+    .select("id, relationship_id, created_at");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).flatMap((item) => {
+    const matchingConnection = sharedConnections.find(
+      (connection) => connection.parsed.relationshipId === item.relationship_id
+    );
+
+    if (!matchingConnection) {
+      return [];
+    }
+
+    return [
+      {
+        id: `remote-mood-${item.id}`,
+        connectionId: matchingConnection.connectionId,
+        name: "You",
+        mood: input.mood,
+        energy: input.energy,
+        health: input.health,
+        note: input.note || "",
+        updatedAt: formatTime(item.created_at),
+        color: "#FFD8DE",
+      } satisfies MoodUpdate,
+    ];
+  });
 }

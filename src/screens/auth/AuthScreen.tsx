@@ -9,11 +9,9 @@ import {
   View,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { socialPlatforms } from "../../data/mockData";
 import { useAuth } from "../../providers/AuthProvider";
 import { palette } from "../../theme/palette";
 import { typography } from "../../theme/typography";
-import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 
 type AuthMode = "login" | "signup";
@@ -25,20 +23,8 @@ export function AuthScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedSocials, setSelectedSocials] = useState<string[]>([
-    "Instagram",
-    "Spotify",
-  ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const toggleSocial = (platform: string) => {
-    setSelectedSocials((current) =>
-      current.includes(platform)
-        ? current.filter((item) => item !== platform)
-        : [...current, platform]
-    );
-  };
 
   const handleSubmit = async () => {
     setErrorMessage(null);
@@ -197,22 +183,6 @@ export function AuthScreen() {
             value={password}
             onChangeText={setPassword}
           />
-
-          <Text style={styles.sectionTitle}>Link your favorite socials</Text>
-          <Text style={styles.sectionHint}>
-            Start with profile context. The real relationship activity still happens
-            inside the app.
-          </Text>
-          <View style={styles.chipWrap}>
-            {socialPlatforms.map((platform) => (
-              <FilterChip
-                key={platform}
-                label={platform}
-                active={selectedSocials.includes(platform)}
-                onPress={() => toggleSocial(platform)}
-              />
-            ))}
-          </View>
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 

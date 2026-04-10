@@ -5,8 +5,15 @@ import { MetricCard } from "../../components/ui/MetricCard";
 import { MultiSelectDropdown } from "../../components/ui/MultiSelectDropdown";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
+import { hasSupabaseCredentials } from "../../config/env";
 import { moodUpdates, promptDeck } from "../../data/mockData";
 import { getMonthNames, parseDateValue } from "../../lib/dateHelpers";
+import {
+  saveSharedCheckInPrompt,
+  saveSharedCheckInReply,
+  saveSharedMoodUpdate,
+} from "../../lib/sharedContent";
+import { isSharedConnection } from "../../lib/sharedRelationships";
 import { useAuth } from "../../providers/AuthProvider";
 import { useAppData } from "../../providers/AppDataProvider";
 import { useProfile } from "../../providers/ProfileProvider";
@@ -121,18 +128,19 @@ function formatParticipantLine(names: string[]) {
 }
 
 export function HomeScreen() {
-  const { displayName, userEmail, isDemoMode, previewMode } = useAuth();
+  const { displayName, user, userEmail, isDemoMode, previewMode } = useAuth();
   const { profile } = useProfile();
   const {
     connections,
     visitPlans,
     journalEntries,
     timeCapsules,
+    moodUpdates: storedMoodUpdates,
     checkInPrompts,
     setCheckInPrompts,
   } = useAppData();
   const liveConnections = connections;
-  const liveMoodUpdates = isDemoMode ? moodUpdates : [];
+  const liveMoodUpdates = isDemoMode ? moodUpdates : storedMoodUpdates;
   const [selectedPrompt, setSelectedPrompt] = useState(promptDeck[0]);
   const [myMood, setMyMood] = useState("calm");
   const [myEnergy, setMyEnergy] = useState("steady");
@@ -203,35 +211,86 @@ export function HomeScreen() {
     );
   };
 
-  const sendStatus = () => {
+  const sendStatus = async () => {
     setStatusSent(true);
+
+    const sharedAudience = selectedAudience.filter((connectionId) =>
+      isSharedConnection(connectionId)
+    );
+
+    if (user?.id && hasSupabaseCredentials && sharedAudience.length) {
+      try {
+        await saveSharedMoodUpdate({
+          userId: user.id,
+          connectionIds: sharedAudience,
+          mood: myMood,
+          energy: myEnergy,
+          health: myHealth,
+          note: `${profile.displayName || "You"} checked in`,
+        });
+      } catch {
+        // Leave the local confirmation visible even if the network save fails.
+      }
+    }
   };
 
-  const sendPrompt = () => {
+  const sendPrompt = async () => {
     if (!selectedPromptAudience.length) {
       return;
     }
 
-    setCheckInPrompts((current) => [
-      ...selectedPromptAudience.map((connectionId, index) => ({
+    const localPrompts = selectedPromptAudience.map((connectionId, index) => ({
         id: `prompt-${Date.now()}-${index}`,
         connectionId,
         promptText: selectedPrompt,
         sentAt: "Sent just now",
         direction: "outgoing" as const,
-      })),
-      ...current,
-    ]);
+      }));
+
+    const sharedAudience = selectedPromptAudience.filter((connectionId) =>
+      isSharedConnection(connectionId)
+    );
+
+    let remotePrompts = [] as typeof localPrompts;
+    if (user?.id && hasSupabaseCredentials && sharedAudience.length) {
+      try {
+        remotePrompts = await saveSharedCheckInPrompt({
+          userId: user.id,
+          connectionIds: sharedAudience,
+          promptText: selectedPrompt,
+        });
+      } catch {
+        remotePrompts = [];
+      }
+    }
+
+    const localOnlyPrompts = localPrompts.filter(
+      (prompt) => !isSharedConnection(prompt.connectionId)
+    );
+
+    setCheckInPrompts((current) => [...remotePrompts, ...localOnlyPrompts, ...current]);
     setPromptSent(true);
   };
 
   const incomingPrompts = checkInPrompts.filter((prompt) => prompt.direction === "incoming");
 
-  const savePromptReply = (promptId: string) => {
+  const savePromptReply = async (promptId: string) => {
     const nextReply = (promptReplyDrafts[promptId] ?? "").trim();
 
     if (!nextReply) {
       return;
+    }
+
+    if (user?.id && hasSupabaseCredentials && promptId.startsWith("remote-prompt-")) {
+      try {
+        await saveSharedCheckInReply({
+          userId: user.id,
+          promptId,
+          replyText: nextReply,
+        });
+      } catch {
+        return;
+      }
     }
 
     setCheckInPrompts((current) =>

@@ -10,6 +10,7 @@ import type {
   ItineraryItem,
   JournalEntry,
   Message,
+  MoodUpdate,
   PackingItem,
   TimeCapsule,
   VisitPlan,
@@ -21,6 +22,7 @@ export interface StoredAppData {
   timeCapsules: TimeCapsule[];
   calendarEvents: CalendarEvent[];
   messages: Message[];
+  moodUpdates: MoodUpdate[];
   checkInPrompts: CheckInPrompt[];
   visitPlans: VisitPlan[];
   itineraryItems: ItineraryItem[];
