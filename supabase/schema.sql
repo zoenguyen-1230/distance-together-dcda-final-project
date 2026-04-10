@@ -187,24 +187,37 @@ as $$
 declare
   invite_record public.relationship_invites%rowtype;
   current_user_id uuid := auth.uid();
+  current_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
   sender_name text;
   recipient_name text;
+  existing_relationship_id uuid;
   next_relationship_id uuid;
 begin
   if current_user_id is null then
     raise exception 'Not authenticated';
   end if;
 
+  if current_email = '' then
+    raise exception 'Signed-in account is missing an email address';
+  end if;
+
   select *
   into invite_record
   from public.relationship_invites
   where id = invite_id
-    and status = 'pending'
-    and lower(recipient_email) = lower(coalesce(auth.jwt() ->> 'email', ''));
+    and status in ('pending', 'accepted')
+    and lower(recipient_email) = current_email;
 
   if not found then
     raise exception 'Invite not found';
   end if;
+
+  insert into public.profiles (id, full_name)
+  values (
+    current_user_id,
+    split_part(current_email, '@', 1)
+  )
+  on conflict (id) do nothing;
 
   sender_name := coalesce(
     (select full_name from public.profiles where id = invite_record.sender_id),
@@ -213,16 +226,33 @@ begin
 
   recipient_name := coalesce(
     (select full_name from public.profiles where id = current_user_id),
-    split_part(coalesce(auth.jwt() ->> 'email', 'connection'), '@', 1)
+    split_part(current_email, '@', 1)
   );
 
-  insert into public.relationships (name, relationship_type, created_by)
-  values (
-    recipient_name || ' & ' || sender_name,
-    invite_record.relationship_type,
-    invite_record.sender_id
-  )
-  returning id into next_relationship_id;
+  select r.id
+  into existing_relationship_id
+  from public.relationships r
+  join public.relationship_members sender_member
+    on sender_member.relationship_id = r.id
+   and sender_member.profile_id = invite_record.sender_id
+  join public.relationship_members recipient_member
+    on recipient_member.relationship_id = r.id
+   and recipient_member.profile_id = current_user_id
+  where r.relationship_type = invite_record.relationship_type
+  order by r.created_at desc
+  limit 1;
+
+  if existing_relationship_id is null then
+    insert into public.relationships (name, relationship_type, created_by)
+    values (
+      recipient_name || ' & ' || sender_name,
+      invite_record.relationship_type,
+      invite_record.sender_id
+    )
+    returning id into next_relationship_id;
+  else
+    next_relationship_id := existing_relationship_id;
+  end if;
 
   insert into public.relationship_members (relationship_id, profile_id, role)
   values
@@ -233,7 +263,10 @@ begin
   update public.relationship_invites
   set status = 'accepted',
       responded_at = timezone('utc', now())
-  where id = invite_id;
+  where sender_id = invite_record.sender_id
+    and relationship_type = invite_record.relationship_type
+    and lower(recipient_email) = current_email
+    and status in ('pending', 'accepted');
 
   return next_relationship_id;
 end;

@@ -46,6 +46,24 @@ const seanProfileImage = require("../../assets/sean-profile.jpg");
 const profileImages: Record<string, any> = {
   "conn-1": seanProfileImage,
 };
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return fallback;
+}
+
 export function ConnectionsScreen() {
   const { isDemoMode, user, userEmail } = useAuth();
   const { connections, setConnections, persistAppDataNow } = useAppData();
@@ -334,7 +352,7 @@ export function ConnectionsScreen() {
       const nextSentInvites = await fetchSentInvites(user.id);
       setSentInvites(nextSentInvites);
     } catch (error) {
-      setInviteFeedback(error instanceof Error ? error.message : "Invite could not be sent.");
+      setInviteFeedback(getErrorMessage(error, "Invite could not be sent."));
     } finally {
       setInviteLoading(false);
     }
@@ -350,7 +368,7 @@ export function ConnectionsScreen() {
       setIncomingInvites(nextIncomingInvites.filter((invite) => invite.status === "pending"));
       setInviteFeedback("Invite accepted. Your shared space is now connected.");
     } catch (error) {
-      setInviteFeedback(error instanceof Error ? error.message : "Invite could not be accepted.");
+      setInviteFeedback(getErrorMessage(error, "Invite could not be accepted."));
     }
   };
 
@@ -359,7 +377,7 @@ export function ConnectionsScreen() {
       await declineRelationshipInvite(inviteId);
       setIncomingInvites((current) => current.filter((invite) => invite.id !== inviteId));
     } catch (error) {
-      setInviteFeedback(error instanceof Error ? error.message : "Invite could not be declined.");
+      setInviteFeedback(getErrorMessage(error, "Invite could not be declined."));
     }
   };
 
