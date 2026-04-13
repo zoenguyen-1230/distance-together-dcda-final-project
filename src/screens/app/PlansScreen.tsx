@@ -3,9 +3,15 @@ import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 import { FilterChip } from "../../components/ui/FilterChip";
 import { ScreenSurface } from "../../components/ui/ScreenSurface";
 import { SectionCard } from "../../components/ui/SectionCard";
-import { hasSupabaseCredentials } from "../../config/env";
+import { env, hasGoogleCalendarClientId, hasSupabaseCredentials } from "../../config/env";
 import { dateIdeas } from "../../data/mockData";
 import { inputValueToDisplayDate, parseDateValue, toDateValue } from "../../lib/dateHelpers";
+import {
+  clearGoogleCalendarSession,
+  connectGoogleCalendar,
+  createGoogleCalendarEvent,
+  readGoogleCalendarSession,
+} from "../../lib/googleCalendar";
 import { saveSharedCalendarEvent } from "../../lib/sharedContent";
 import { isSharedConnection } from "../../lib/sharedRelationships";
 import { useAppData } from "../../providers/AppDataProvider";
@@ -199,7 +205,7 @@ function toTitleCase(value: string) {
 }
 
 export function PlansScreen() {
-  const { user } = useAuth();
+  const { user, userEmail } = useAuth();
   const { profile, saveProfile } = useProfile();
   const { connections, calendarEvents, setCalendarEvents } = useAppData();
   const liveCallWindows = useMemo(() => {
@@ -225,7 +231,9 @@ export function PlansScreen() {
   const [selectedPerson, setSelectedPerson] = useState("");
   const [selectedEnergy, setSelectedEnergy] = useState<EnergyFit>("steady");
   const [scheduledCallId, setScheduledCallId] = useState<string | null>(null);
+  const [scheduledCallMessage, setScheduledCallMessage] = useState<string | null>(null);
   const [alternateTimesOpenFor, setAlternateTimesOpenFor] = useState<string | null>(null);
+  const [calendarConnectionMessage, setCalendarConnectionMessage] = useState<string | null>(null);
 
   const filteredCallWindows = useMemo(
     () =>
@@ -239,6 +247,7 @@ export function PlansScreen() {
 
   const selectedConnection = connections.find((connection) => connection.name === selectedPerson);
   const connectedCalendars = profile.connectedCalendars ?? [];
+  const googleCalendarSession = readGoogleCalendarSession(userEmail);
 
   React.useEffect(() => {
     if (!selectedPerson && liveCallWindows[0]?.person) {
@@ -282,6 +291,46 @@ export function PlansScreen() {
 
   const toggleCalendarProvider = async (provider: CalendarProvider) => {
     const isConnected = connectedCalendars.includes(provider);
+
+    if (provider === "Google Calendar") {
+      if (isConnected) {
+        clearGoogleCalendarSession(userEmail);
+        await saveProfile({
+          ...profile,
+          connectedCalendars: connectedCalendars.filter((item) => item !== provider),
+        });
+        setCalendarConnectionMessage("Google Calendar disconnected.");
+        return;
+      }
+
+      if (!hasGoogleCalendarClientId) {
+        setCalendarConnectionMessage(
+          "Add EXPO_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID first so Google Calendar can authorize on web."
+        );
+        return;
+      }
+
+      try {
+        await connectGoogleCalendar({
+          clientId: env.googleCalendarClientId,
+          userEmail,
+        });
+
+        await saveProfile({
+          ...profile,
+          connectedCalendars: [...connectedCalendars, provider],
+        });
+        setCalendarConnectionMessage(
+          "Google Calendar connected. Smart call drafts can now save into your Google Calendar."
+        );
+      } catch {
+        setCalendarConnectionMessage(
+          "Google Calendar authorization was canceled or could not be completed."
+        );
+      }
+        return;
+    }
+
     const nextCalendars = isConnected
       ? connectedCalendars.filter((item) => item !== provider)
       : [...connectedCalendars, provider];
@@ -290,6 +339,9 @@ export function PlansScreen() {
       ...profile,
       connectedCalendars: nextCalendars,
     });
+    setCalendarConnectionMessage(
+      isConnected ? `${provider} disconnected.` : `${provider} opened for calendar handoff.`
+    );
 
     if (!isConnected) {
       const providerUrl = calendarProviderUrls[provider];
@@ -304,10 +356,35 @@ export function PlansScreen() {
 
   const scheduleCall = async (slot: SmartCallWindow) => {
     const date = parseDateValue(slot.dateValue);
+    const startMinutes = parseClockMinutes(slot.startLabel);
+    const endMinutes = parseClockMinutes(slot.endLabel);
 
     if (!date) {
       return;
     }
+
+    const startDate =
+      startMinutes === null
+        ? null
+        : new Date(
+            date.getFullYear(),
+            date.getMonth(),
+            date.getDate(),
+            Math.floor(startMinutes / 60),
+            startMinutes % 60,
+            0
+          );
+    const endDate =
+      endMinutes === null
+        ? null
+        : new Date(
+            date.getFullYear(),
+            date.getMonth(),
+            date.getDate(),
+            Math.floor(endMinutes / 60),
+            endMinutes % 60,
+            0
+          );
 
     const nextEvent: CalendarEvent = {
       id: `call-event-${Date.now()}`,
@@ -340,9 +417,34 @@ export function PlansScreen() {
     }
 
     setScheduledCallId(slot.id);
+    setScheduledCallMessage("Call draft added to your shared calendar.");
     setAlternateTimesOpenFor(null);
 
+    if (connectedCalendars.includes("Google Calendar") && googleCalendarSession && startDate && endDate) {
+      try {
+        await createGoogleCalendarEvent({
+          accessToken: googleCalendarSession.accessToken,
+          title: `Call with ${slot.person}`,
+          description: `Scheduled from Same Time\n\nSuggested window: ${slot.startLabel} - ${slot.endLabel} CT`,
+          startDate,
+          endDate,
+          timeZone: "America/Chicago",
+        });
+        setScheduledCallMessage(
+          "Call draft added to your shared calendar and saved into Google Calendar."
+        );
+        return;
+      } catch {
+        clearGoogleCalendarSession(userEmail);
+      }
+    }
+
     if (connectedCalendars.includes("Google Calendar")) {
+      setScheduledCallMessage(
+        googleCalendarSession
+          ? "Call draft added to your shared calendar. Google Calendar needs to reconnect, so a handoff tab was opened instead."
+          : "Call draft added to your shared calendar. Finish Google Calendar authorization to save there directly."
+      );
       void Linking.openURL(buildGoogleCalendarUrl(slot)).catch(() => {
         // Keep the shared calendar draft even if the external tab is blocked.
       });
@@ -421,10 +523,17 @@ export function PlansScreen() {
             ))}
           </View>
           <Text style={styles.helperMeta}>
-            {connectedCalendars.length
-              ? `Connected for scheduling: ${connectedCalendars.join(", ")}`
-              : "Choose the calendars you want to keep aligned with Same Time. Shared call drafts will still appear here."}
+            {calendarConnectionMessage ??
+              (connectedCalendars.length
+                ? `Connected for scheduling: ${connectedCalendars.join(", ")}`
+                : "Choose the calendars you want to keep aligned with Same Time. Shared call drafts will still appear here.")}
           </Text>
+          {!hasGoogleCalendarClientId ? (
+            <Text style={styles.helperMeta}>
+              Google Calendar authorization turns on after you add a web client ID in
+              {" "}EXPO_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID.
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.controlGroup}>
@@ -494,11 +603,7 @@ export function PlansScreen() {
 
               {scheduledCallId === slot.id ? (
                 <View style={styles.confirmationCard}>
-                  <Text style={styles.helperMeta}>
-                    {connectedCalendars.length
-                      ? `Call draft added to your shared calendar and prepared for ${connectedCalendars.join(", ")}.`
-                      : "Call draft added to your shared calendar."}
-                  </Text>
+                  <Text style={styles.helperMeta}>{scheduledCallMessage}</Text>
                 </View>
               ) : null}
 

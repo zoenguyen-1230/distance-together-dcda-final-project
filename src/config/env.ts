@@ -21,9 +21,17 @@ const supabasePublicKey =
 const previewBuildModeValue =
   runtimeProcessEnv.EXPO_PUBLIC_PREVIEW_BUILD_MODE ?? "";
 
+const googleCalendarClientId =
+  (typeof process !== "undefined"
+    ? process.env.EXPO_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID
+    : undefined) ??
+  runtimeProcessEnv.EXPO_PUBLIC_GOOGLE_CALENDAR_CLIENT_ID ??
+  "";
+
 export const env = {
   supabaseUrl,
   supabasePublicKey,
+  googleCalendarClientId,
   previewBuildMode:
     previewBuildModeValue === "filled" || previewBuildModeValue === "blank"
       ? (previewBuildModeValue as PreviewBuildMode)
@@ -33,3 +41,5 @@ export const env = {
 export const hasSupabaseCredentials = Boolean(
   env.supabaseUrl && env.supabasePublicKey
 );
+
+export const hasGoogleCalendarClientId = Boolean(env.googleCalendarClientId);

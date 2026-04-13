@@ -21,3 +21,15 @@ export function writeBrowserStorage(key: string | null, value: string) {
     // Ignore web storage issues and let async persistence continue.
   }
 }
+
+export function removeBrowserStorage(key: string | null) {
+  if (!key || typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // Ignore web storage issues and let async persistence continue.
+  }
+}
